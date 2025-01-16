@@ -1,4 +1,5 @@
 import os
+import time
 import discord
 from discord.ext import commands
 from utils import initialise_db, log
@@ -29,7 +30,15 @@ async def on_application_command_error(ctx, error):
 @bot.command()
 async def ping(ctx):
     """Shows my latency."""
-    await ctx.respond("Latency: {0:.2f}ms".format(bot.latency * 1000))
+    start_time = time.perf_counter()
+    msg = await ctx.respond("Pong!")
+    response = (time.perf_counter() - start_time) * 1000
+
+    start_time = time.perf_counter()
+    await msg.edit(content="Pong!\nInitial response: {0:.2f}ms".format(response))
+    latency = (time.perf_counter() - start_time) * 1000
+
+    await msg.edit(content="Pong!\nInitial response: {0:.2f}ms\nRound-trip latency: {1:.2f}ms".format(response, latency))
 
 @bot.command()
 async def gacha(ctx):

@@ -21,7 +21,7 @@ class Delivery(discord.ui.View):
         ]
         self.rates = [1, 4, 15, 80]
 
-    async def edit_original_embed(self):
+    def edit_original_embed(self):
         self.embed.description = "{0}'s rolls: {1}\n".format(self.user.mention, sum(self.rolls))
         for i in range(4):
             self.embed.description += "* {0}x {1} {2}\n".format(self.rolls[i], self.emoji[i], self.names[i])
