@@ -53,7 +53,10 @@ async def gacha(ctx):
 
 
 #   Load cogs
-cogs = ['cogs.moneygame.commands']
+cogs = [
+    'cogs.moneygame.commands',
+    'cogs.ai.commands'
+]
 
 for cog in cogs:
     bot.load_extension(cog)

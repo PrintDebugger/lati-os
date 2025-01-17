@@ -189,5 +189,5 @@ class MoneyGame(commands.Cog):
             user.update('wallet', user.wallet + amount)
             await ctx.respond("Withdrawn ${0:,}, your bank now has ${1:,}".format(amount, user.bank))
 
-def setup(bot): # Pycord calls this function to setup this cog
+def setup(bot): #   Pycord calls this function to setup this cog
     bot.add_cog(MoneyGame(bot))

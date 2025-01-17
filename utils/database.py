@@ -43,5 +43,5 @@ def execute_query(query, params=()):
             return cursor
         except sqlite3.OperationalError as e:
             from utils import log
-            log("❌ ERROR: Database query execution failed")
+            log("❌ ERROR: In \"execute_query\"")
             raise RuntimeError("Database Error: {0}".format(e)) from e
