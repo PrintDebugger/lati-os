@@ -23,7 +23,7 @@ class LatiBot(discord.Bot):
             ))
 
     @commands.command()
-    async def ping(ctx):
+    async def ping(self, ctx):
         """Shows my latency."""
         start_time = time.perf_counter()
         msg = await ctx.respond("Pong!")
