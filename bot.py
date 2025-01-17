@@ -8,7 +8,7 @@ from utils import log
 class LatiBot(discord.Bot):
 
     def __init__(self, debug_guilds=None, *args, **kwargs):
-        super.__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.debug_guilds = debug_guilds or []
 
     async def on_ready(self):

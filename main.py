@@ -10,7 +10,7 @@ load_dotenv()
 TOKEN = os.environ['BOT_TOKEN']
 
 
-bot = discord.Bot(debug_guilds=[1214372737313931304])
+bot = LatiBot(debug_guilds=[1214372737313931304])
 
 @bot.command()
 async def gacha(ctx):
