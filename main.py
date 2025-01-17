@@ -12,6 +12,22 @@ TOKEN = os.environ['BOT_TOKEN']
 
 bot = LatiBot(debug_guilds=[1214372737313931304])
 
+
+#    Misc commands
+
+@bot.command()
+async def ping(ctx):
+    """Shows my latency."""
+    start_time = time.perf_counter()
+    msg = await ctx.respond("Pong!")
+    response = (time.perf_counter() - start_time) * 1000
+
+    start_time = time.perf_counter()
+    await msg.edit(content="Pong!\nInitial response: {0:.2f}ms".format(response))
+    latency = (time.perf_counter() - start_time) * 1000
+
+    await msg.edit(content="Pong!\nInitial response: {0:.2f}ms\nRound-trip latency: {1:.2f}ms".format(response, latency))
+
 @bot.command()
 async def gacha(ctx):
     """A simulation of Pokemon Cafe Remix's delivery feature."""

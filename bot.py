@@ -21,16 +21,3 @@ class LatiBot(discord.Bot):
                 color = discord.Colour.brand_red(), 
                 description = "You can use this command again in **{0:,} seconds**".format(round(error.retry_after))
             ))
-
-    @commands.command()
-    async def ping(self, ctx):
-        """Shows my latency."""
-        start_time = time.perf_counter()
-        msg = await ctx.respond("Pong!")
-        response = (time.perf_counter() - start_time) * 1000
-
-        start_time = time.perf_counter()
-        await msg.edit(content="Pong!\nInitial response: {0:.2f}ms".format(response))
-        latency = (time.perf_counter() - start_time) * 1000
-
-        await msg.edit(content="Pong!\nInitial response: {0:.2f}ms\nRound-trip latency: {1:.2f}ms".format(response, latency))
