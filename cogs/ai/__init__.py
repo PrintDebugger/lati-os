@@ -1,0 +1,1 @@
+from cogs.ai.sightengine import detect_ai
