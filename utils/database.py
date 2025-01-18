@@ -54,7 +54,7 @@ def execute_query(query, params=()):
             with conn.cursor() as cursor:
                 cursor.execute(query, params)
                 conn.commit()
-                return cursor
+                return cursor.fetchall()
     except Exception as e:
         from utils import log
         log("❌ ERROR: In \"execute_query\"")

@@ -9,8 +9,7 @@ class UserData:
         self.load_data()
         
     def load_data(self):
-        cursor = execute_query("SELECT name, wallet, bank, level, exp FROM users WHERE id = %s", (self.id,))
-        data = cursor.fetchone()
+        data = execute_query("SELECT name, wallet, bank, level, exp FROM users WHERE id = %s", (self.id,))
 
         if data:
             self.has_account = True
