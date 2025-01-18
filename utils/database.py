@@ -34,7 +34,7 @@ def initialise_db():
                         exp INTEGER DEFAULT 0
                     );
                     ALTER TABLE users
-                    ALTER COLUMN id SET DATA TYPE BIGSERIAL;
+                    ALTER COLUMN id SET DATA TYPE BIGINT;
                 """)
                 conn.commit()
         log("Connected to PostgreSQL database \"{0}\"".format(PGDATABASE))
