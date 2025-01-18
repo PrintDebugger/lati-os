@@ -9,7 +9,7 @@ class UserData:
         self.load_data()
         
     def load_data(self):
-        cursor = execute_query("SELECT name, wallet, bank, level, exp FROM users WHERE id = ?", (self.id,))
+        cursor = execute_query("SELECT name, wallet, bank, level, exp FROM users WHERE id = %s", (self.id,))
         data = cursor.fetchone()
 
         if data:
@@ -21,7 +21,7 @@ class UserData:
             
     def create_account(self):
         execute_query(
-            "INSERT INTO users (id, name) VALUES (?, ?)", 
+            "INSERT INTO users (id, name) VALUES (%s, %s)", 
             (self.id, self.name)
         )
         self.has_account = True
@@ -32,7 +32,7 @@ class UserData:
         
         setattr(self, field, value)
         execute_query(
-            "UPDATE users SET {0} = ? WHERE id = ?".format(field), 
+            "UPDATE users SET {0} = %s WHERE id = %s".format(field), 
             (value, self.id,)
         )
             
@@ -52,7 +52,7 @@ class UserData:
         self.cash_multi = 0.96 + self.level * 0.04 
         self.wallet += rewards
         execute_query(
-            "UPDATE users SET wallet = ?, level = ?, exp = ? where id = ?", 
+            "UPDATE users SET wallet = %s, level = %s, exp = %s where id = %s", 
             (self.wallet, self.level, self.exp, self.id)
         )
 
