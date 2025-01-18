@@ -57,4 +57,5 @@ def execute_query(query, params=()):
                 return cursor.fetchall()
     except Exception as e:
         from utils import log
-        log("❌ ERROR: In \"execute_query\"\n{0}".format(e))
+        log("❌ ERROR: In \"execute_query\"\n{0}".format(str(e)))
+        raise
