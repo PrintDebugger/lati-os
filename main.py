@@ -1,7 +1,7 @@
 import os
 import time
 import discord
-from utils import initialise_db, log
+from utils import log, initialise_db
 from interactions import Delivery
 from dotenv import load_dotenv
 from bot import LatiBot

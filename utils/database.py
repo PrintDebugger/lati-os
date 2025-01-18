@@ -1,47 +1,61 @@
-#   Fetch data from the database.
-
 import os
-import sqlite3
 from dotenv import load_dotenv
+import psycopg
 
 load_dotenv()
 
-DB_FILE = os.environ['DB_FILEPATH']
+PGHOST = os.environ['PGHOST']
+PGUSER = os.environ['PGUSER']
+PGPASSWORD = os.environ['PGPASSWORD']
+PGDATABASE = os.environ['PGDATABASE']
+PGPORT = os.environ['PGPORT']
 
 def initialise_db():
     from utils import log
-    if DB_FILE is None:
-        raise ValueError("environment key DB_FILEPATH is not set")
-        return
-
-    if not os.path.exists(DB_FILE):
-        log("⚠️ WARNING: Creating database \"userdata.db\"")
-
-    with sqlite3.connect(DB_FILE) as db:
-        cursor = db.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                wallet INTEGER DEFAULT 10000,
-                bank INTEGER DEFAULT 0,
-                level INTEGER DEFAULT 1,
-                exp INTEGER DEFAULT 0
-            )
-        """)
-        db.commit()
     
-    log("Connected to database \"{0}\"".format(DB_FILE))
+    # Connect to PostgreSQL
+    try:
+        with psycopg.connect(
+            host=PGHOST,
+            user=PGUSER,
+            password=PGPASSWORD,
+            database=PGDATABASE,
+            port=PGPORT
+        ) as conn:
+            with conn.cursor() as cursor:
+                # Create table if it doesn't exist
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS users (
+                        id SERIAL PRIMARY KEY,
+                        name TEXT,
+                        wallet INTEGER DEFAULT 10000,
+                        bank INTEGER DEFAULT 0,
+                        level INTEGER DEFAULT 1,
+                        exp INTEGER DEFAULT 0
+                    )
+                """)
+                conn.commit()
+
+        log("Connected to PostgreSQL database \"{0}\"".format(PGDATABASE))
+    
+    except Exception as e:
+        log(f"❌ ERROR: Could not connect to PostgreSQL database: {e}")
+        raise
 
 def execute_query(query, params=()):
-    with sqlite3.connect(DB_FILE) as db:
-        cursor = db.cursor()
-
-        try:
-            cursor.execute(query, params)
-            db.commit()
-            return cursor
-        except sqlite3.OperationalError as e:
-            from utils import log
-            log("❌ ERROR: In \"execute_query\"")
-            raise RuntimeError("Database Error: {0}".format(e)) from e
+    try:
+        with psycopg.connect(
+            host=PGHOST,
+            user=PGUSER,
+            password=PGPASSWORD,
+            database=PGDATABASE,
+            port=PGPORT
+        ) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query, params)
+                conn.commit()
+                return cursor
+    except Exception as e:
+        from utils import log
+        log("❌ ERROR: In \"execute_query\"")
+        raise RuntimeError(f"Database Error: {e}") from e

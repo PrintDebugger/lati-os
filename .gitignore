@@ -1,3 +1,4 @@
 .env
+.testing
 userdata.db
 __pycache__
