@@ -58,4 +58,4 @@ def execute_query(query, params=()):
     except Exception as e:
         from utils import log
         log("❌ ERROR: In \"execute_query\"")
-        raise RuntimeError(f"Database Error: {e}") from e
+        raise
