@@ -35,7 +35,7 @@ def initialise_db():
                     )
                 """)
                 conn.commit()
-
+                return cursor
         log("Connected to PostgreSQL database \"{0}\"".format(PGDATABASE))
     
     except Exception as e:
