@@ -43,7 +43,7 @@ def initialise_db():
         log("❌ ERROR: Could not connect to PostgreSQL database: {0}".format(str(e)))
         raise
 
-def execute_query(query, params=()):
+def execute_query(query, params=(), fetch=None):
     try:
         with psycopg.connect(
             host=PGHOST,
@@ -55,7 +55,18 @@ def execute_query(query, params=()):
             with conn.cursor() as cursor:
                 cursor.execute(query, params)
                 conn.commit()
-                return cursor.fetchone()
+                
+                # For SELECT queries, return the result
+                if fetch == 'one':
+                    return cursor.fetchone()
+                elif fetch == 'all':
+                    return cursor.fetchall()
+                
+                # For INSERT, UPDATE, DELETE, return True if any rows were affected
+                if cursor.rowcount > 0:
+                    return True
+                else:
+                    return False
     except Exception as e:
         from utils import log
         log("❌ ERROR: In \"execute_query\"\n{0}".format(str(e)))
