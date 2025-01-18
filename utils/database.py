@@ -9,6 +9,7 @@ load_dotenv()
 DB_FILE = os.environ['DB_FILEPATH']
 
 def initialise_db():
+    from utils import log
     if DB_FILE is None:
         raise ValueError("environment key DB_FILEPATH is not set")
         return
@@ -30,7 +31,6 @@ def initialise_db():
         """)
         db.commit()
     
-    from utils import log
     log("Connected to database \"{0}\"".format(DB_FILE))
 
 def execute_query(query, params=()):
