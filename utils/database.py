@@ -26,7 +26,7 @@ def initialise_db():
                 # Create table if it doesn't exist
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS users (
-                        id SERIAL PRIMARY KEY,
+                        id BIGSERIAL PRIMARY KEY,
                         name TEXT,
                         wallet INTEGER DEFAULT 10000,
                         bank INTEGER DEFAULT 0,
