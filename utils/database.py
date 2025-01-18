@@ -35,11 +35,10 @@ def initialise_db():
                     )
                 """)
                 conn.commit()
-                return cursor
         log("Connected to PostgreSQL database \"{0}\"".format(PGDATABASE))
     
     except Exception as e:
-        log(f"❌ ERROR: Could not connect to PostgreSQL database: {e}")
+        log("❌ ERROR: Could not connect to PostgreSQL database: {0}".format(str(e)))
         raise
 
 def execute_query(query, params=()):
