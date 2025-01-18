@@ -19,7 +19,7 @@ def initialise_db():
             host=PGHOST,
             user=PGUSER,
             password=PGPASSWORD,
-            database=PGDATABASE,
+            dbname=PGDATABASE,
             port=PGPORT
         ) as conn:
             with conn.cursor() as cursor:
