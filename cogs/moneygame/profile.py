@@ -26,6 +26,6 @@ class EmbedProfile(discord.Embed):
         )
         self.add_field(
             name = "Bonus",
-            value = f"* +{int((data.cash_multi - 1) * 100)}% cash\n* +0% exp\n* +0% luck",
+            value = f"* +{round((data.cash_multi - 1) * 100)}% cash",
             inline = True
         )

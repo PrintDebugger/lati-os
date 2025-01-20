@@ -2,6 +2,7 @@ import random
 import discord
 from discord.ext import commands
 from cogs.moneygame import EmbedProfile, UserData
+from cogs.moneygame.constants import *
 from interactions import send_confirmation
 
 class MoneyGame(commands.Cog):
@@ -24,13 +25,12 @@ class MoneyGame(commands.Cog):
         async def predicate(ctx):
             user = UserData(ctx.user)
             if user.level < level:
-                await ctx.respond("You need to be Level {0} to use this command.".format(level))
+                await ctx.respond(f"You need to be Level {level} to use this command.")
                 return False
             else:
                 return True
         return discord.ext.commands.check(predicate)
     
-
     @discord.slash_command()
     async def start(self, ctx):
         """Begin your journey in Money Game."""
@@ -46,9 +46,11 @@ class MoneyGame(commands.Cog):
         """View someone's stats."""
         if not target:
             target = ctx.user
+
         user = UserData(target)
+
         if user.has_account:
-            await ctx.respond("Viewing {0}'s profile".format(target.name), embed=EmbedProfile(target, user))
+            await ctx.respond(f"Viewing {target.name}'s profile", embed=EmbedProfile(target, user))
         else:
             if not target or target.id == ctx.user.id:
                 await ctx.respond("You don't have an account. Run `/start` to create one!")
@@ -70,16 +72,16 @@ class MoneyGame(commands.Cog):
 
         chance = random.random()
 
-        if chance < 0.3:        # 30% chance
+        if chance < 0.4:        # 40% chance
             earnings = random.randint(60,300)
             message = "You got ${0:,}, cool. Better than nothing."
-        elif chance < 0.4:      # 10% chance
+        elif chance < 0.54:     # 14% chance
             earnings = random.randint(600,850)
             message = "Damn, you got ${0:,}? May be your lucky day."
-        elif chance < 0.442:    # 4.2% chance
+        elif chance < 0.592:    # 5.2% chance
             earnings = random.randint(1200,1800)
             message = "${0:,}?? Holy COW, that's a lot of money!"
-        elif chance < 0.45:     # 0.8% chance
+        elif chance < 0.6:      # 0.8% chance
             earnings = random.randint(3000,6000)
             message = "**WTF YOU GOT ${0:,}, HOW THE HELL???????**"
         else:
@@ -95,43 +97,55 @@ class MoneyGame(commands.Cog):
             await user.update('wallet', user.wallet + earnings)
 
     @discord.slash_command()
-    @commands.cooldown(1, 60, commands.BucketType.user)
+    @commands.cooldown(1, 20, commands.BucketType.user)
     @registered_only()
-    @level_limit(3)
+    @level_limit(ROB_MIN_LEVEL)
     async def steal(self, ctx, target: discord.Member):
         """Steal someone's money."""
         if target.id == ctx.user.id:
-            await ctx.respond("stealing from yourself? you ok ah bro")
-        elif target.bot:
-            await ctx.respond("You cannot steal from the bot because it is in the 4th dimension")
+            return await ctx.respond("stealing from yourself? you ok ah bro")
+        
+        if target.bot:
+            return await ctx.respond("You cannot steal from the bot because it is in the 4th dimension")
+        
+        stealer = UserData(ctx.user)
+        victim = UserData(target)
+
+        if stealer.wallet < ROB_MIN_AMOUNT:
+            return await ctx.respond(f"You need at least ${ROB_MIN_AMOUNT} to steal, or else you end up in jail")
+        
+        if not victim.has_account:
+            return await ctx.respond("That person does not have an account.")
+
+        if victim.level < ROB_MIN_LEVEL:
+            return await ctx.respond(f"You cannot steal from someone who isn't Level {ROB_MIN_LEVEL} yet.")
+        
+        if victim.wallet < ROB_MIN_AMOUNT:
+            return await ctx.respond(f"bro doesn't even have ${ROB_MIN_AMOUNT} leave him alone ba")
+        
+        chance = random.random()
+        success = True
+
+        if chance > 0.99:
+            stolen_money = victim.wallet
+            message = "🤑 WTF YOU STOLE **EVERYTHING** (${0:,}), Gai Loooooo"
+        elif chance > 0.93:
+            stolen_money = round(victim.wallet * 0.7)
+            message = "💰 You stole a lot of money leh, you got ${0:,}, happy ma?" 
+        elif chance > 0.6:
+            stolen_money = round(victim.wallet * 0.3)
+            message = "💸 You stole some money and quietly left... you got ${0:,}."
         else:
-            victim = UserData(target)
-            if victim.has_account:
-                if victim.wallet < 200:
-                    await ctx.respond("bro doesn't even have $200 leave him alone ba")
-                elif victim.level < 3:
-                    await ctx.respond("You cannot steal from someone who isn't Level 3 yet.")
-                else:
-                    chance = random.random()
+            success = False
+            stolen_money = -1 * max([200, round(stealer.wallet * 0.05)])
 
-                    if chance < 0.2:
-                        stolen_money = round(victim.wallet * random.uniform(0.1, 0.3))
-                        await ctx.respond("You stole ${0:,}, careful jangan ditangkap".format(stolen_money))
-                    elif chance < 0.24:
-                        stolen_money = round(victim.wallet * random.uniform(0.5, 0.9))
-                        await ctx.respond("You stole a lot of money leh, you got ${0:,}, happy ma?".format(stolen_money))  
-                    elif chance < 0.25:
-                        stolen_money = victim.wallet
-                        await ctx.respond("You stole FUCKING EVERYTHING (${0:,}), Gai Loooooooo".format(stolen_money))
-                    else:
-                        stolen_money = round(victim.wallet * random.uniform(0.01, 0.04))
-                        await ctx.respond("You stole a small portion of their money... you got ${0:,}".format(stolen_money))
+        if success:    
+            await ctx.respond(message.format(stolen_money))
+        else:
+            await ctx.respond(f"Oof, you kena tangkap lol. You paid {victim.name} ${(-1 * stolen_money):,} for trying to rob them.")
 
-                    stealer = UserData(ctx.user)
-                    await stealer.update('wallet', stealer.wallet + stolen_money)
-                    await victim.update('wallet', victim.wallet - stolen_money)
-            else:
-                await ctx.respond("That person does not have an account.")
+        await stealer.update('wallet', stealer.wallet + stolen_money)
+        await victim.update('wallet', victim.wallet - stolen_money)            
 
     @discord.slash_command()
     @registered_only()
@@ -139,13 +153,13 @@ class MoneyGame(commands.Cog):
     async def give(self, ctx, amount: int, target: discord.Member):
         """Give your money to someone else."""
         if target.id == ctx.user.id:
-            await ctx.respond("You cannot give money to yourself la bodoh...")
+            await ctx.respond("You cannot give money to yourself la bodoh")
         else:
             donor = UserData(ctx.user)
             if donor.wallet == 0:
                 await ctx.respond("You don't have any money to share.")
             elif amount > donor.wallet:
-                await ctx.respond("You cannot share more than what you have (${0:,})".format(donor.wallet))
+                await ctx.respond(f"You cannot share more than what you have (${donor.wallet:,})")
             else:
                 receiver = UserData(target)
                 if receiver.has_account:
@@ -155,7 +169,7 @@ class MoneyGame(commands.Cog):
                         )
                     )
                     if result:
-                        await ctx.followup.send("{0} has gave {1} ${2:,}!".format(donor.name, receiver.name, amount))
+                        await ctx.followup.send(f"{donor.name} has gave {receiver.name} ${amount:,}!")
                         await donor.update('wallet', donor.wallet - amount)
                         await receiver.update('wallet', receiver.wallet + amount)
                 else:
@@ -165,31 +179,31 @@ class MoneyGame(commands.Cog):
 
     @bank.command()
     @registered_only()
-    @level_limit(3)
+    @level_limit(BANK_MIN_LEVEL)
     @discord.option('amount', int, min_value=1)
     async def deposit(self, ctx, amount: int):
         """Deposit some money into the bank."""
         user = UserData(ctx.user)
         if amount > user.wallet:
-            await ctx.respond("Your wallet has only ${0:,}".format(user.wallet))
+            await ctx.respond(f"Your wallet has only ${user.wallet:,}")
         else:
-            await ctx.respond("Deposited ${0:,}, your bank now has ${1:,}".format(amount, user.bank))
             await user.update('wallet', user.wallet - amount)
             await user.update('bank', user.bank + amount)
+            await ctx.respond(f"Deposited ${amount:,}, your bank now has ${user.bank:,}")
 
     @bank.command()
     @registered_only()
-    @level_limit(3)
+    @level_limit(BANK_MIN_LEVEL)
     @discord.option('amount', int, min_value=1)
     async def withdraw(self, ctx, amount: int):
         """Withdraw some money from the bank."""
         user = UserData(ctx.user)
         if amount > user.bank:
-            await ctx.respond("Your bank has only ${0:,}".format(user.bank))
+            await ctx.respond(f"Your bank has only ${user.bank:,}")
         else:
-            await ctx.respond("Withdrawn ${0:,}, your bank now has ${1:,}".format(amount, user.bank))
             await user.update('bank', user.bank - amount)
             await user.update('wallet', user.wallet + amount)
+            await ctx.respond(f"Withdrawn ${amount:,}, your bank now has ${user.bank:,}")
 
 def setup(bot): #   Pycord calls this function to setup this cog
     bot.add_cog(MoneyGame(bot))
