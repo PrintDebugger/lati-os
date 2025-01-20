@@ -9,6 +9,7 @@ PGUSER = os.environ['PGUSER']
 PGPASSWORD = os.environ['PGPASSWORD']
 PGDATABASE = os.environ['PGDATABASE']
 PGPORT = os.environ['PGPORT']
+DATABASE_URL = "postgresql://{0}:{1}@{2}:{3}/{4}"
 
 def initialise_db():
     from utils import log
@@ -33,11 +34,9 @@ def initialise_db():
                         level INTEGER DEFAULT 1,
                         exp INTEGER DEFAULT 0
                     );
-                    ALTER TABLE users
-                    ALTER COLUMN id SET DATA TYPE BIGINT;
                 """)
                 conn.commit()
-        log("Connected to PostgreSQL database \"{0}\"".format(PGDATABASE))
+        log("Connected to PostgreSQL database \"{0}\" at {1}:{2}".format(PGDATABASE, PGHOST, PGPORT))
     
     except Exception as e:
         log("❌ ERROR: Could not connect to PostgreSQL database: {0}".format(str(e)))

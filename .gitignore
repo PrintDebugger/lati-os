@@ -1,4 +1,4 @@
 .env
 .testing
-userdata.db
+.backup
 __pycache__

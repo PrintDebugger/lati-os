@@ -1,6 +1,6 @@
 #   Fetch user data through a discord user ID
 
-from utils import execute_query
+from utils import execute_query, log
 
 class UserData:
     def __init__(self, user):
@@ -21,11 +21,11 @@ class UserData:
     def create_account(self):
         execute_query(
             "INSERT INTO users (id, name) VALUES (%s, %s)", 
-            (self.id, self.name)
+            (self.id, self.name,)
         )
         self.has_account = True
 
-    def update(self, field, value):
+    async def update(self, field, value):
         if not hasattr(self, field):
             raise ValueError("Invalid Field: {0}".format(field))
         
@@ -34,6 +34,7 @@ class UserData:
             "UPDATE users SET {0} = %s WHERE id = %s".format(field), 
             (value, self.id,)
         )
+        log("Updated {0} to {1} [{2}]".format(field, value, self.id))
             
     async def add_exp(self, amount, ctx):
         old_level = self.level
@@ -52,7 +53,7 @@ class UserData:
         self.wallet += rewards
         execute_query(
             "UPDATE users SET wallet = %s, level = %s, exp = %s where id = %s", 
-            (self.wallet, self.level, self.exp, self.id)
+            (self.wallet, self.level, self.exp, self.id,)
         )
 
         if self.level > old_level:    
@@ -60,3 +61,4 @@ class UserData:
                 await ctx.followup.send("{0} You are now Level {1}!".format(ctx.user.mention, self.level))
             else:
                 await ctx.followup.send("{0} Great job on reaching level {1}! You earned ${2}".format(ctx.user.mention, self.level, rewards))
+        log("Added {0} exp [{1}]".format(amount, self.id))

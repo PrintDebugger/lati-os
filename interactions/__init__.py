@@ -1,2 +1,1 @@
 from interactions.confirm import send_confirmation
-from interactions.misc import Delivery
