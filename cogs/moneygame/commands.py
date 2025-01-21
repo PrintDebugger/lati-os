@@ -147,10 +147,10 @@ class MoneyGame(commands.Cog):
             await ctx.respond(message.format(stolen_money))
         else:
             await ctx.respond(f"Oof, you kena tangkap lol. You paid {victim.name} ${(-1 * stolen_money):,} for trying to rob them.")
-
+        
         await stealer.add_wallet(stolen_money)
         await victim.add_wallet(-1 * stolen_money)
-        await stealer.add_exp(exp)
+        await stealer.add_exp(exp, ctx)
 
     @discord.slash_command()
     @registered_only()
@@ -177,7 +177,7 @@ class MoneyGame(commands.Cog):
                         await ctx.followup.send(f"{donor.name} has gave {receiver.name} ${amount:,}!")
                         await donor.add_wallet(-1 * amount)
                         await receiver.add_wallet(amount)
-                        await donor.add_exp(10)
+                        await donor.add_exp(10, ctx)
                 else:
                     await ctx.respond("That person does not have an account.")
 
@@ -195,7 +195,7 @@ class MoneyGame(commands.Cog):
         else:
             await user.add_bank(amount)
             await ctx.respond(f"Deposited ${amount:,}, your bank now has ${user.bank:,}")
-            await user.add_exp(10)
+            await user.add_exp(10, ctx)
 
     @bank.command()
     @registered_only()
@@ -209,7 +209,7 @@ class MoneyGame(commands.Cog):
         else:
             await user.add_bank(-1 * amount)
             await ctx.respond(f"Withdrawn ${amount:,}, your bank now has ${user.bank:,}")
-            await user.add_exp(10)
+            await user.add_exp(10, ctx)
 
 def setup(bot): #   Pycord calls this function to setup this cog
     bot.add_cog(MoneyGame(bot))
