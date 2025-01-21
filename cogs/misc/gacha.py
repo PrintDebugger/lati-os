@@ -14,17 +14,17 @@ class Delivery(discord.ui.View):
             "Common Gift"
         ]
         self.emoji = [
-            "<:RedGift:1328225120979779664>", 
-            "<:RainbowGift:1328225101606289420>",
-            "<:GoldGIft:1328225089182892093>", 
-            "<:GreenGift:1328225072124792977>"
+            "<:RedGift:1331175787289776179>", 
+            "<:RainbowGift:1331176034740994050>",
+            "<:GoldGIft:1331175762497372240>", 
+            "<:GreenGift:1331176032367149127>"
         ]
         self.rates = [1, 4, 15, 80]
 
     def edit_original_embed(self):
-        self.embed.description = "{0}'s rolls: {1}\n".format(self.user.mention, sum(self.rolls))
+        self.embed.description = f"{self.user.mention}'s rolls: {sum(self.rolls)}\n"
         for i in range(4):
-            self.embed.description += "* {0}x {1} {2}\n".format(self.rolls[i], self.emoji[i], self.names[i])
+            self.embed.description += f"* {self.rolls[i]}x {self.emoji[i]} {self.names[i]}\n"
 
     async def interaction_check(self, interaction: discord.Interaction):
         if interaction.user != self.user:
@@ -57,7 +57,7 @@ class Delivery(discord.ui.View):
 
         self.edit_original_embed()
         await interaction.response.edit_message(embed=self.embed, view=self)
-        await interaction.followup.send(embed=discord.Embed(description="Pelipper has returned with:\n# {0}".format(text)), ephemeral=True)
+        await interaction.followup.send(embed=discord.Embed(description="Pelipper has returned with:\n# {text}"), ephemeral=True)
 
     @discord.ui.button(label="Roll 10x", style=discord.ButtonStyle.primary, emoji=discord.PartialEmoji.from_str("<:Item309:1328714395651670166>"))
     async def rollten(self, button:discord.ui.Button, interaction:discord.Interaction):
@@ -89,5 +89,5 @@ class Delivery(discord.ui.View):
     async def chances(self, button:discord.ui.Button, interaction:discord.Interaction):
         text = ""
         for i in range(4):
-            text += "* `{0}%` {1} {2}\n".format(self.rates[i], self.emoji[i], self.names[i])
+            text += f"* `{self.rates[i]}%` {self.emoji[i]} {self.names[i]}\n"
         await interaction.response.send_message(embed=discord.Embed(title="Chances", description=text), ephemeral=True)

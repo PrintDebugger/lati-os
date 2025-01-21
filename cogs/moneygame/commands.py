@@ -94,7 +94,7 @@ class MoneyGame(commands.Cog):
         await user.add_exp(10, ctx)
 
         if earnings != 0:
-            await user.update('wallet', user.wallet + earnings)
+            await user.add_wallet(earnings)
 
     @discord.slash_command()
     @commands.cooldown(1, 20, commands.BucketType.user)
@@ -129,23 +129,28 @@ class MoneyGame(commands.Cog):
         if chance > 0.99:
             stolen_money = victim.wallet
             message = "🤑 WTF YOU STOLE **EVERYTHING** (${0:,}), Gai Loooooo"
+            exp = 100
         elif chance > 0.93:
             stolen_money = round(victim.wallet * 0.7)
-            message = "💰 You stole a lot of money leh, you got ${0:,}, happy ma?" 
+            message = "💰 You stole a lot of money leh, you got ${0:,}, happy ma?"
+            exp = 50
         elif chance > 0.6:
             stolen_money = round(victim.wallet * 0.3)
             message = "💸 You stole some money and quietly left... you got ${0:,}."
+            exp = 20
         else:
             success = False
             stolen_money = -1 * max([200, round(stealer.wallet * 0.05)])
+            exp = 10
 
         if success:    
             await ctx.respond(message.format(stolen_money))
         else:
             await ctx.respond(f"Oof, you kena tangkap lol. You paid {victim.name} ${(-1 * stolen_money):,} for trying to rob them.")
 
-        await stealer.update('wallet', stealer.wallet + stolen_money)
-        await victim.update('wallet', victim.wallet - stolen_money)            
+        await stealer.add_wallet(stolen_money)
+        await victim.add_wallet(-1 * stolen_money)
+        await stealer.add_exp(exp)
 
     @discord.slash_command()
     @registered_only()
@@ -170,8 +175,9 @@ class MoneyGame(commands.Cog):
                     )
                     if result:
                         await ctx.followup.send(f"{donor.name} has gave {receiver.name} ${amount:,}!")
-                        await donor.update('wallet', donor.wallet - amount)
-                        await receiver.update('wallet', receiver.wallet + amount)
+                        await donor.add_wallet(-1 * amount)
+                        await receiver.add_wallet(amount)
+                        await donor.add_exp(10)
                 else:
                     await ctx.respond("That person does not have an account.")
 
@@ -187,9 +193,9 @@ class MoneyGame(commands.Cog):
         if amount > user.wallet:
             await ctx.respond(f"Your wallet has only ${user.wallet:,}")
         else:
-            await user.update('wallet', user.wallet - amount)
-            await user.update('bank', user.bank + amount)
+            await user.add_bank(amount)
             await ctx.respond(f"Deposited ${amount:,}, your bank now has ${user.bank:,}")
+            await user.add_exp(10)
 
     @bank.command()
     @registered_only()
@@ -201,9 +207,9 @@ class MoneyGame(commands.Cog):
         if amount > user.bank:
             await ctx.respond(f"Your bank has only ${user.bank:,}")
         else:
-            await user.update('bank', user.bank - amount)
-            await user.update('wallet', user.wallet + amount)
+            await user.add_bank(-1 * amount)
             await ctx.respond(f"Withdrawn ${amount:,}, your bank now has ${user.bank:,}")
+            await user.add_exp(10)
 
 def setup(bot): #   Pycord calls this function to setup this cog
     bot.add_cog(MoneyGame(bot))
