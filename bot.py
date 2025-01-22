@@ -13,9 +13,14 @@ class LatiBot(discord.Bot):
         await self.sync_commands()
         log("{0} has connected to Discord".format(self.user))
 
-    async def on_application_command_error(self, ctx, error):
+    async def on_application_command_error(self, ctx: discord.ApplicationContext, error):
         if isinstance(error, commands.errors.CommandOnCooldown):
             await ctx.respond(embed=discord.Embed(
-                color = discord.Colour.brand_red(), 
                 description = "You can use this command again in **{0:,} seconds**".format(round(error.retry_after))
             ))
+        else:
+            await ctx.respond(embed=discord.Embed(
+                title = "Uh oh...",
+                description = f"An error occured while trying to run the `/{ctx.command}` command."
+            ))
+            print(f"❌ ERROR: in command '{ctx.command}'\n{error}")
