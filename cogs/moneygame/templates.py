@@ -4,13 +4,14 @@ import discord
 
 class EmbedProfile(discord.Embed):
     def __init__(self, user, data):
+        data.load_all()
         length = 8
-        progress = int(length * (data.exp / ((data.level+1) * 25)))
+        progress = int(length * (data._exp / ((data._level+1) * 25)))
         super().__init__(
             description = (
-                f"## {data.name}\n"
-                f"` {data.level} ` {'@' * progress}{'^' * (length - progress)}\n"
-                f"-# NEXT LEVEL: {25 * (data.level + 1) - data.exp}XP"
+                f"## {user.display_name}\n"
+                f"` {data._level} ` {'@' * progress}{'^' * (length - progress)}\n"
+                f"-# NEXT LEVEL: {25 * (data._level + 1) - data._exp}XP"
             )
         )
         self.set_thumbnail(url=user.avatar.url),
@@ -19,13 +20,13 @@ class EmbedProfile(discord.Embed):
         self.add_field(
             name = "Money",
             value = (
-                f"💵 $ {data.wallet:,}\n"
-                f"🏦 $ {data.bank:,}\n"
-                f"$ {(data.wallet + data.bank):,} total"
+                f"💵 $ {data._wallet:,}\n"
+                f"🏦 $ {data._bank:,}\n"
+                f"$ {(data._wallet + data._bank):,} total"
             )
         )
         self.add_field(
             name = "Bonus",
-            value = f"* +{round((data.cash_multi - 1) * 100)}% cash",
+            value = f"* +{round((data.calculate_cash_multi() - 1) * 100)}% cash",
             inline = True
         )

@@ -9,7 +9,6 @@ PGUSER = os.environ['PGUSER']
 PGPASSWORD = os.environ['PGPASSWORD']
 PGDATABASE = os.environ['PGDATABASE']
 PGPORT = os.environ['PGPORT']
-DATABASE_URL = "postgresql://{0}:{1}@{2}:{3}/{4}"
 
 def initialise_db():
     from utils import log
@@ -28,7 +27,6 @@ def initialise_db():
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS users (
                         id BIGSERIAL PRIMARY KEY,
-                        name TEXT,
                         wallet INTEGER DEFAULT 10000,
                         bank INTEGER DEFAULT 0,
                         level INTEGER DEFAULT 1,
@@ -36,10 +34,10 @@ def initialise_db():
                     );
                 """)
                 conn.commit()
-        log("Connected to PostgreSQL database \"{0}\" at {1}:{2}".format(PGDATABASE, PGHOST, PGPORT))
+        log(f"Connected to PostgreSQL database '{PGDATABASE}' at {PGHOST}:{PGPORT}")
     
     except Exception as e:
-        log("❌ ERROR: Could not connect to PostgreSQL database: {0}".format(str(e)))
+        log(f"❌ ERROR: Could not connect to PostgreSQL database:\n{str(e)}")
         raise
 
 def execute_query(query, params=(), fetch=None):
@@ -68,5 +66,5 @@ def execute_query(query, params=(), fetch=None):
                     return False
     except Exception as e:
         from utils import log
-        log("❌ ERROR: In \"execute_query\"\n{0}".format(str(e)))
+        log(f"❌ ERROR: In 'execute_query':\n{str(e)}")
         raise
