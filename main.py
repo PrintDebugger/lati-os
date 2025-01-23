@@ -1,9 +1,10 @@
 import os
 import time
 import discord
-from utils import log, initialise_db
-from cogs.misc import Delivery
 from dotenv import load_dotenv
+
+from cogs.misc import Delivery
+from utils import log, initialise_db
 from bot import LatiBot
 
 load_dotenv()
