@@ -1,6 +1,7 @@
-import random
 import discord
+import random
 from discord.ext import commands
+
 from cogs.moneygame import EmbedProfile, UserData
 from cogs.moneygame.constants import *
 from interactions import send_confirmation
@@ -10,10 +11,10 @@ class MoneyGame(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # Money command check
-    def registered_only():
+    def registered_only(): # Some commands require an account i.e. a UserData to be used
         async def predicate(ctx):
             user = UserData(ctx.user.id)
+
             if user.has_account:
                 return True
             else:
@@ -21,9 +22,10 @@ class MoneyGame(commands.Cog):
                 return False
         return discord.ext.commands.check(predicate)
 
-    def level_limit(level: int):
+    def level_limit(level: int): # Some commands require the user's level to be a certain amount 
         async def predicate(ctx):
             user = UserData(ctx.user.id)
+
             if user.level < level:
                 await ctx.respond(f"You need to be Level {level} to use this command.")
                 return False
@@ -31,21 +33,26 @@ class MoneyGame(commands.Cog):
                 return True
         return discord.ext.commands.check(predicate)
     
-    async def cog_after_invoke(self, ctx):
+    async def cog_after_invoke(self, ctx): # Send level up message after a command (if the user levels up)
         if not hasattr(ctx, 'level_data'):
             return
         
         if not ctx.level_data['hasLeveledUp']:
             return
         
-        if ctx.level_data['rewards'] > 0:
+        rewards = ctx.level_data['rewards']
+        level = ctx.level_data['level']
+
+        if rewards > 0:
             await ctx.followup.send(
-                f"{ctx.user.mention} Great job on reaching level {ctx.level_data['level']}!\n"
-                f"You earned ${ctx.level_data['rewards']:,}"
+                f"{ctx.user.mention} Great job on reaching level {level}!\n"
+                f"You earned ${rewards:,}"
             )
         else:
-            await ctx.followup.send(f"{ctx.user.mention} You are now level {ctx.level_data['level']}!")
+            await ctx.followup.send(f"{ctx.user.mention} You are now level {level}!")
     
+    #   COMMANDS
+
     @discord.slash_command()
     async def start(self, ctx):
         """Begin your journey in Money Game."""
@@ -113,8 +120,8 @@ class MoneyGame(commands.Cog):
 
     @discord.slash_command()
     @commands.cooldown(1, 20, commands.BucketType.user)
-    @registered_only()
     @level_limit(ROB_MIN_LEVEL)
+    @registered_only()
     async def steal(self, ctx, target: discord.Member):
         """Steal someone's money."""
         if target.id == ctx.user.id:
@@ -175,60 +182,64 @@ class MoneyGame(commands.Cog):
         if target.id == ctx.user.id:
             return await ctx.respond("You cannot give money to yourself la bodoh")
 
-        donor = UserData(ctx.user.id)
         receiver = UserData(target.id)
 
         if not receiver.has_account:
             return await ctx.respond("That person does not have an account.")
         
+        donor = UserData(ctx.user.id)
         result = await send_confirmation(ctx, ctx.user, 
             "Are you sure you want to give ${0:,} to {1}?\n\n${2:,}  ►►►  ${3:,}".format(
                 amount, target.name, donor.wallet, donor.wallet - amount
             )
         )
 
-        if result:
-            if donor.wallet == 0:
-                return await ctx.followup.send("You don't have any money to share.")
+        if result != True:
+            return
         
-            if amount > donor.wallet:
-                return await ctx.followup.send(f"You cannot share more than what you have (${donor.wallet:,})")
-            
-            await ctx.followup.send(f"{ctx.user.display_name} has gave {target.display_name} ${amount:,}!")
-            await donor.add_wallet(-1 * amount)
-            await receiver.add_wallet(amount)
-            ctx.level_data = await donor.add_exp(10)
+        if donor.wallet == 0:
+            return await ctx.followup.send("You don't have any money to share.")
+    
+        if amount > donor.wallet:
+            return await ctx.followup.send(f"You cannot share more than what you have (${donor.wallet:,})")
+        
+        await ctx.followup.send(f"{ctx.user.display_name} has gave {target.display_name} ${amount:,}!")
+        await donor.add_wallet(-1 * amount)
+        await receiver.add_wallet(amount)
+        ctx.level_data = await donor.add_exp(10)
             
 
     bank = discord.SlashCommandGroup("bank", "Bank operations")
 
     @bank.command()
-    @registered_only()
     @level_limit(BANK_MIN_LEVEL)
+    @registered_only()
     @discord.option('amount', int, min_value=1)
     async def deposit(self, ctx, amount):
         """Deposit some money into the bank."""
         user = UserData(ctx.user.id)
+
         if amount > user.wallet:
-            await ctx.respond(f"Your wallet has only ${user.wallet:,}")
-        else:
-            await user.add_bank(amount)
-            await ctx.respond(f"Deposited ${amount:,}, your bank now has ${user.bank:,}")
-            ctx.level_data = await user.add_exp(10)
+            return await ctx.respond(f"Your wallet has only ${user.wallet:,}")
+
+        await user.add_bank(amount)
+        await ctx.respond(f"Deposited ${amount:,}, your bank now has ${user.bank:,}")
+        ctx.level_data = await user.add_exp(10)
 
     @bank.command()
-    @registered_only()
     @level_limit(BANK_MIN_LEVEL)
+    @registered_only()
     @discord.option('amount', int, min_value=1)
     async def withdraw(self, ctx, amount):
         """Withdraw some money from the bank."""
         user = UserData(ctx.user.id)
+
         if amount > user.bank:
-            await ctx.respond(f"Your bank has only ${user.bank:,}")
-        else:
-            await user.add_bank(-1 * amount)
-            await ctx.respond(f"Withdrawn ${amount:,}, your bank now has ${user.bank:,}")
-            ctx.level_data = await user.add_exp(10)
+            return await ctx.respond(f"Your bank has only ${user.bank:,}")
+
+        await user.add_bank(-1 * amount)
+        await ctx.respond(f"Withdrawn ${amount:,}, your bank now has ${user.bank:,}")
+        ctx.level_data = await user.add_exp(10)
 
 def setup(bot): #   Pycord calls this function to setup this cog
     bot.add_cog(MoneyGame(bot))

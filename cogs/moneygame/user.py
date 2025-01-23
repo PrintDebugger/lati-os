@@ -3,6 +3,7 @@
 from utils import execute_query, log
 
 class UserData:
+    
     def __init__(self, user_id: int):
         self.id = user_id
         self._has_account = None
@@ -73,18 +74,14 @@ class UserData:
 
     async def add_bank(self, amount):
         try:
-            data = execute_query("SELECT wallet, bank FROM users WHERE id = %s FOR UPDATE", (self.id,), fetch='one')
-            old_wallet, old_bank = data
-
-            if amount > old_wallet or (old_bank + amount) < 0:
-                raise ValueError("Invalid Value")
-            
-            self._wallet = old_wallet - amount
-            self._bank = old_bank + amount
-            execute_query(
-                "UPDATE users SET wallet = wallet - %s, bank = bank + %s WHERE id = %s", 
-                (amount, amount, self.id,)
+            data = execute_query(
+                "UPDATE users SET wallet = wallet - %s, bank = bank + %s WHERE id = %s RETURNING wallet, bank", 
+                (amount, amount, self.id,),
+                fetch='one'
             )
+            self._wallet, self._bank = data
+            old_wallet = self._wallet + amount
+            old_bank = self._bank - amount
             log(f"[{self.id}] updated wallet: {old_wallet} -> {self._wallet}, bank: {old_bank} -> {self._bank}")
         except Exception as e:
             log(f"[{self.id}] ❌ ERROR: Bank transfer failed:\n{str(e)}")
@@ -111,7 +108,11 @@ class UserData:
         self._wallet = old_wallet + rewards
         self._level = level
         self._exp = exp
-        log(f"[{self.id}] added {amount} exp, updated wallet: {old_wallet} -> {self._wallet}")
+
+        if rewards > 0:
+            log(f"[{self.id}] added {amount} exp, updated wallet: {old_wallet} -> {self._wallet}")
+        else:
+            log(f"[{self.id}] added {amount} exp")
 
         level_up = level > old_level
         return {
