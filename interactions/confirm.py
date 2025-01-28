@@ -1,7 +1,7 @@
 import discord
 
 class Confirm(discord.ui.View):
-    def __init__(self, user:discord.User, embed):
+    def __init__(self, user:discord.Member, embed):
         super().__init__(timeout=30)
         self.user = user
         self.embed = embed
@@ -42,9 +42,14 @@ class Confirm(discord.ui.View):
         self.stop()
 
 
-async def send_confirmation(ctx, user: discord.Member, message):
+async def send_confirmation(message, user: discord.Member, ctx: discord.ApplicationContext=None, interaction: discord.Interaction=None, ephemeral: bool=None):
     embed = discord.Embed(title="Pending Confirmation", description=message, color=discord.Colour.yellow())
     view = Confirm(user, embed)
-    view.message = await ctx.respond(embed=embed, view=view)
+
+    if ctx:
+        view.message = await ctx.respond(embed=embed, view=view, ephemeral=ephemeral if ephemeral else True)
+    if interaction:
+        view.message = await interaction.respond(embed=embed, view=view, ephemeral=ephemeral if ephemeral else True)
+
     await view.wait()
     return view.result
