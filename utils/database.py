@@ -35,14 +35,18 @@ def initialise_db():
                         wallet INTEGER DEFAULT 10000,
                         bank INTEGER DEFAULT 0,
                         level INTEGER DEFAULT 1,
-                        exp INTEGER DEFAULT 0
+                        exp INTEGER DEFAULT 0,
+                        items JSONB DEFAULT '{}'::jsonb,
+                        activeItems JSONB DEFAULT '{}'::jsonb
                     );
+                    ALTER TABLE users ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '{}'::jsonb;
+                    ALTER TABLE users ADD COLUMN IF NOT EXISTS activeItems JSONB DEFAULT '{}'::jsonb;
                 """)
                 conn.commit()
         log(f"Connected to PostgreSQL database '{PGDATABASE}' at {PGHOST}:{PGPORT}")
     
     except Exception as e:
-        log(f"❌ ERROR: Could not connect to PostgreSQL database:\n{str(e)}")
+        log(f"❌ Could not connect to PostgreSQL database:\n{str(e)}")
         raise
 
 def execute_query(query, params=(), fetch=None):
@@ -57,13 +61,9 @@ def execute_query(query, params=(), fetch=None):
                     return cursor.fetchone()
                 elif fetch == 'all':
                     return cursor.fetchall()
-                
                 # For INSERT, UPDATE, DELETE, return True if any rows were affected
-                if cursor.rowcount > 0:
-                    return True
                 else:
-                    return False
+                    return cursor.rowcount
     except Exception as e:
-        from utils import log
-        log(f"❌ ERROR: In 'execute_query':\n{str(e)}")
+        print(f"In execute_query: {str(e)}")
         raise

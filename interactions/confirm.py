@@ -42,12 +42,9 @@ class Confirm(discord.ui.View):
         self.stop()
 
 
-async def send_confirmation(ctx, user: discord.Member, message, followup=False):
+async def send_confirmation(ctx, user: discord.Member, message):
     embed = discord.Embed(title="Pending Confirmation", description=message, color=discord.Colour.yellow())
     view = Confirm(user, embed)
-    if followup:
-        view.message = await ctx.followup.send(embed=embed, view=view)
-    else:
-        view.message = await ctx.respond(embed=embed, view=view)
+    view.message = await ctx.respond(embed=embed, view=view)
     await view.wait()
     return view.result

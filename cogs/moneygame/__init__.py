@@ -1,2 +1,2 @@
-from cogs.moneygame.templates import EmbedProfile
-from cogs.moneygame.user import UserData
+from cogs.moneygame.item import MoneyItem
+from cogs.moneygame.user import MoneyUser

@@ -1,0 +1,58 @@
+{
+    "1": {
+        "name": "Gold Firework",
+        "use": "Starts a short coin giveaway. Participants can earn thousands of coins.",
+        "description": "You lose money from buying this, in exchange for the joy of everyone else.",
+        "sell": 0,
+        "rarity": "Common",
+        "type": "Consumable"
+    },
+    "2": {
+        "name": "Bank Note",
+        "use": "Use this to increase your bank capacity by 5000-25000 coins.",
+        "description": "Transaction limits suck. How'd you even get that much money anyway?",
+        "sell": 1000,
+        "rarity": "Common",
+        "type": "Buff"
+    },
+    "3": {
+        "name": "Save State",
+        "use": "If you die, you will not lose any coins and this item will be used up.",
+        "description": "Imagine getting rejected by heaven.",
+        "sell": 5000,
+        "rarity": "Common",
+        "type": "Tool"
+    },
+    "4": {
+        "name": "Apple",
+        "use": "For the next 6 hours, your chance of dying is significantly reduced.",
+        "description": "Guildmaster Wigglytuff won't be happy if you ate those.",
+        "sell": 200,
+        "rarity": "Common",
+        "type": "Buff"
+    },
+    "5": {
+        "name": "Padlock",
+        "use": "For 1 week, your wallet will be protected from stealers. This item may break if someone tries to steal from you.",
+        "description": "You either open it the hard way or the smart way.",
+        "sell": 800,
+        "rarity": "Common",
+        "type": "Buff"
+    },
+    "6": {
+        "name": "Bomb Trap",
+        "use": "For the next 24 hours, anyone who tries to steal from you has a chance to step on it and die.",
+        "description": "Murder is worse than theft.",
+        "sell": 1600,
+        "rarity": "Common",
+        "type": "Tool"
+    },
+    "7": {
+        "name": "Azure Feather",
+        "use": "Sell this item for 10 coins.",
+        "description": "A mysterious blue feather. No man knows about its origin.",
+        "sell": 10,
+        "rarity": "Rare",
+        "type": "Collectible"
+    }
+}

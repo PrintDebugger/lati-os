@@ -4,7 +4,7 @@ import discord
 from dotenv import load_dotenv
 
 from cogs.misc import Delivery
-from utils import log, initialise_db
+from utils import log
 from bot import LatiBot
 
 load_dotenv()
@@ -19,15 +19,12 @@ bot = LatiBot(debug_guilds=[1214372737313931304])
 @bot.command()
 async def ping(ctx):
     """Shows my latency."""
-    start_time = time.perf_counter()
     msg = await ctx.respond("Pong!")
-    response = (time.perf_counter() - start_time) * 1000
-
+    response = bot.latency * 1000
     start_time = time.perf_counter()
-    await msg.edit(content="Pong!\nInitial response: {0:.2f}ms".format(response))
+    await msg.edit(content=f"Pong!\nInitial response: {response:.2f}ms")
     latency = (time.perf_counter() - start_time) * 1000
-
-    await msg.edit(content="Pong!\nInitial response: {0:.2f}ms\nRound-trip latency: {1:.2f}ms".format(response, latency))
+    await msg.edit(content=f"Pong!\nInitial response: {response:.2f}ms\nRound-trip latency: {latency:.2f}ms")
 
 @bot.command()
 async def gacha(ctx):
@@ -48,9 +45,11 @@ cogs = [
 ]
 
 for cog in cogs:
-    bot.load_extension(cog)
-    log("Loaded extension {0}".format(cog))
+    try:
+        bot.load_extension(cog)
+        log(f"Loaded extension {cog}")
+    except Exception as e:
+        log(f"❌ ERROR: Failed to load extension {cog}")
+        print(e)
 
-
-initialise_db()
 bot.run(TOKEN)
