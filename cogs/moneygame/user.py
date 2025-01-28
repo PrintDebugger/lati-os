@@ -174,8 +174,11 @@ class MoneyUser:
 
             #   Update cache
             self._items = updated_items[0]
-            if not self._items:
-                log(f"[{self.id}] updated item {MoneyItem.from_id(item_id).name} (id {item_id}): {self._items[str(item_id)] - amount} -> {self._items[str(item_id)]}")
+            
+            #   Logging
+            new_item_amount = self._items[str(item_id)]
+            if new_item_amount:
+                log(f"[{self.id}] updated item {MoneyItem.from_id(item_id).name} (id {item_id}): {new_item_amount - amount} -> {new_item_amount}")
             else:
                 log(f"[{self.id}] updated item {MoneyItem.from_id(item_id).name} (id {item_id}): {- amount} -> 0")
 
