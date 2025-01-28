@@ -12,7 +12,6 @@ class MoneyItem:
             with open(PATH_ITEMDATA, 'r') as file:
                 try:
                     cls._item_metadata_cache = json.load(file)
-                    print("DEBUG: Loaded items:", cls._item_metadata_cache.keys())
                     cls._data_loaded = True
                 except FileNotFoundError:
                     print(f"FileNotFoundError: Path {PATH_ITEMDATA} does not exist")
@@ -23,6 +22,7 @@ class MoneyItem:
                 except Exception as e:
                     print(f"Unexpected error loading {PATH_ITEMDATA}: {str(e)}")
                     cls._item_metadata_cache = {}
+
 
     #   Create Item class based on item_id
     @classmethod

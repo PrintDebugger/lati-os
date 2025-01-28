@@ -11,7 +11,7 @@
         "name": "Bank Note",
         "use": "Use this to increase your bank capacity by 5000-25000 coins.",
         "description": "Transaction limits suck. How'd you even get that much money anyway?",
-        "sell": 1000,
+        "sell": 100,
         "rarity": "Common",
         "type": "Buff"
     },

@@ -2,16 +2,18 @@ import discord
 import random
 from discord.ext import commands
 
-from cogs.moneygame import MoneyUser, MoneyItem
+from cogs.moneygame import MoneyUser, ShopEmbed, Shop
 from cogs.moneygame.constants import *
 from cogs.moneygame.templates import EmbedProfile, Inventory
 from interactions import send_confirmation
 from utils import initialise_db
 
+
 class MoneyGame(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
 
     async def cog_before_invoke(self, ctx): # Some commands require an account i.e. a MoneyUser to be used
         user = MoneyUser(ctx.user.id)
@@ -28,7 +30,6 @@ class MoneyGame(commands.Cog):
         
         rewards = ctx.level_data['rewards']
         level = ctx.level_data['level']
-
         if rewards > 0:
             await ctx.respond(
                 f"{ctx.user.mention} Great job on reaching level {level}!\n"
@@ -40,7 +41,6 @@ class MoneyGame(commands.Cog):
     def level_limit(level: int): # Some commands require the user's level to be a certain amount 
         async def predicate(ctx):
             user = MoneyUser(ctx.user.id)
-
             if user.level < level:
                 await ctx.respond(f"You need to be Level {level} to use this command.")
                 return False
@@ -48,6 +48,7 @@ class MoneyGame(commands.Cog):
                 return True
         return discord.ext.commands.check(predicate)
     
+
     #   COMMANDS
 
     @discord.slash_command()
@@ -57,12 +58,12 @@ class MoneyGame(commands.Cog):
             target = ctx.user
 
         user = MoneyUser(target.id)
-
         if not user.has_account:
             user.create_account()
         
         user.load_all()
-        await ctx.respond(f"Viewing {target.name}'s profile", embed=EmbedProfile(target, user))
+        await ctx.respond(f"Viewing {target.name}'s profile", embed=EmbedProfile(target.display_name, target.avatar.url, user))
+
 
     @discord.slash_command()
     @commands.cooldown(1, 5, commands.BucketType.user)
@@ -77,7 +78,6 @@ class MoneyGame(commands.Cog):
         ])
 
         chance = random.random()
-
         if chance < 0.4:        # 40% chance
             earnings = random.randint(60,300)
             message = "You got ${0:,}, cool. Better than nothing."
@@ -102,6 +102,7 @@ class MoneyGame(commands.Cog):
         if earnings != 0:
             await user.add_wallet(earnings)
 
+
     @discord.slash_command()
     @commands.cooldown(1, 20, commands.BucketType.user)
     @level_limit(ROB_MIN_LEVEL)
@@ -115,7 +116,6 @@ class MoneyGame(commands.Cog):
         
         stealer = MoneyUser(ctx.user.id)
         victim = MoneyUser(target.id)
-
         if stealer.wallet < ROB_MIN_AMOUNT:
             return await ctx.respond(f"You need at least ${ROB_MIN_AMOUNT} to steal, or else you end up in jail")
 
@@ -127,7 +127,6 @@ class MoneyGame(commands.Cog):
         
         chance = random.random()
         success = True
-
         if chance > 0.992:
             portion = 1
             message = "🤑 WTF YOU STOLE **EVERYTHING** (${0:,}), Gai Loooooo"
@@ -151,6 +150,7 @@ class MoneyGame(commands.Cog):
         await victim.add_wallet(- stolen_money)
         ctx.level_data = await stealer.add_exp(10)
 
+
     @discord.slash_command()
     @discord.option('amount', int, min_value=1)
     async def give(self, ctx, amount: int, target: discord.Member):
@@ -159,25 +159,25 @@ class MoneyGame(commands.Cog):
             return await ctx.respond("You cannot give money to yourself la bodoh")
 
         receiver = MoneyUser(target.id)
-
         if not receiver.has_account:
             receiver.create_account()
         
         donor = MoneyUser(ctx.user.id)
-        result = await send_confirmation(ctx, ctx.user, 
-            "Are you sure you want to give ${0:,} to {1}?\n\n${2:,}  ►  ${3:,}".format(
-                amount, target.name, donor.wallet, donor.wallet - amount
-            )
-        )
-
-        if result != True:
-            return
-        
         if donor.wallet == 0:
             return await ctx.respond("You don't have any money to share.")
     
         if amount > donor.wallet:
             return await ctx.respond(f"You cannot share more than what you have (${donor.wallet:,})")
+
+        result = await send_confirmation( 
+            "Are you sure you want to give ${0:,} to {1}?\n\n${2:,}  ►  ${3:,}".format(
+                amount, target.name, donor.wallet, donor.wallet - amount
+            ),
+            user = ctx.user,
+            ctx = ctx
+        )
+        if not result == True:
+            return
         
         await ctx.respond(f"{ctx.user.display_name} has gave {target.display_name} ${amount:,}!")
         await donor.add_wallet(- amount)
@@ -193,7 +193,6 @@ class MoneyGame(commands.Cog):
     async def deposit(self, ctx, amount):
         """Deposit some money into the bank."""
         user = MoneyUser(ctx.user.id)
-
         if amount > user.wallet:
             return await ctx.respond(f"Your wallet has only ${user.wallet:,}")
 
@@ -201,19 +200,20 @@ class MoneyGame(commands.Cog):
         await ctx.respond(f"Deposited ${amount:,}, your bank now has ${user.bank:,}")
         ctx.level_data = await user.add_exp(10)
 
+
     @bank.command()
     @level_limit(BANK_MIN_LEVEL)
     @discord.option('amount', int, min_value=1)
     async def withdraw(self, ctx, amount):
         """Withdraw some money from the bank."""
         user = MoneyUser(ctx.user.id)
-
         if amount > user.bank:
             return await ctx.respond(f"Your bank has only ${user.bank:,}")
 
         await user.add_bank(- amount)
         await ctx.respond(f"Withdrawn ${amount:,}, your bank now has ${user.bank:,}")
         ctx.level_data = await user.add_exp(10)
+
 
     @discord.slash_command()
     async def inventory(self, ctx, target:discord.Member=None):
@@ -222,19 +222,19 @@ class MoneyGame(commands.Cog):
             target = ctx.user
 
         user = MoneyUser(target.id)
-
         if not user.has_account:
             user.create_account()
 
         items = user.items
-        
-        await ctx.respond(f"Viewing {target.name}'s inventory", embed=Inventory(target, items))
+        await ctx.respond(f"Viewing {target.name}'s inventory", embed=Inventory(items))
+
 
     @discord.slash_command()
     async def shop(self, ctx):
         '''Buy some items.'''
+        user = MoneyUser(ctx.user.id)
+        await ctx.respond(embed=ShopEmbed(user), view=Shop(ctx.user, user))
         
-
 
 def setup(bot): # Pycord calls this function to setup this cog
     initialise_db()

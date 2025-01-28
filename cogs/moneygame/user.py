@@ -135,6 +135,7 @@ class MoneyUser:
     def calculate_cash_multi(self):
         return 0.96 + self.level * 0.04
     
+    
     async def add_item(self, item_id: int, amount: int):
         if amount == 0:
             raise ValueError("Amount cannot be zero")
