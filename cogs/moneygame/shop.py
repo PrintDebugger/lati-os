@@ -30,7 +30,7 @@ def get_shop_listing():
 class ShopEmbed(discord.Embed):
 
     def __init__(self, user):
-        super().__init__(description = f"## {COIN} {user.wallet:,}**\n\n")
+        super().__init__(description = f"## {COIN} {user.wallet:,}\n\n")
 
         shop_listing = get_shop_listing()
         if not shop_listing:
