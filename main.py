@@ -40,7 +40,7 @@ class LatiBot(discord.Bot):
 cogs = [
     'cogs.misc.commands',
     'cogs.moneygame.commands',
-    #'cogs.ai.commands'
+    'cogs.ai.commands'
 ]
 
 bot = LatiBot(debug_guilds=[1214372737313931304])
