@@ -2,16 +2,29 @@
 
 import discord
 from cogs.moneygame import MoneyItem
+from cogs.moneygame.constants import COIN
+from utils import progress_bar
+
+
+class BankBalance(discord.Embed):
+    def __init__(self, type:str, amount:int, user):
+        super().__init__(
+            description = f"{type} {amount:,} coins."
+        )
+
+        self.add_field(name="Wallet Balance", value=f"{COIN} `{user.wallet:,}`", inline=False)
+        self.add_field(name="Bank Balance", value=f"{COIN} `{user.bank:,}`")
+
 
 class EmbedProfile(discord.Embed):
     def __init__(self, name, avatar_url, user):
-        length = 8
-        progress = int(length * (user.exp / ((user.level+1) * 25)))
+        progress = user.exp / (25 * (user.level+1))
+        bar = progress_bar(progress, 6)
         super().__init__(
             description = (
                 f"## {name}\n"
-                f"` {user.level} ` {'@' * progress}{'^' * (length - progress)}\n"
-                f"-# NEXT LEVEL: {25 * (user.level + 1) - user.exp}XP"
+                f"` {user.level} `{bar}\n"
+                f"-# EXP: {user.exp} / {25 * (user.level+1)}"
             )
         )
         self.description = self.description.replace('@', '\u25B0')
@@ -20,9 +33,9 @@ class EmbedProfile(discord.Embed):
         self.add_field(
             name = "Money",
             value = (
-                f"💵 $ {user.wallet:,}\n"
-                f"🏦 $ {user.bank:,}\n"
-                f"$ {(user.wallet + user.bank):,} total"
+                f"{COIN} `{user.wallet:,}`\n"
+                f"🏦 `{user.bank:,}`\n"
+                f"Total: `{(user.wallet + user.bank):,}`"
             )
         )
 
@@ -46,11 +59,9 @@ class Inventory(discord.Embed):
         
         sorted_items = self.sort_items_into_list()
         for item, amount in sorted_items:
-            self.description += (
-                f"**{item.name}** ` {amount} `\n\n"
-            )
-
-        self.description = self.description[:-2]
+            self.description += (f"{item.emoji} **{item.name}** - ` {amount} `\n\n")
+            
+        self.description = self.description[:-2] # remove extra line breaks
 
 
     def sort_items_into_list(self):   
