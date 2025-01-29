@@ -33,7 +33,7 @@ class MoneyGame(commands.Cog):
         if rewards > 0:
             await ctx.respond(
                 f"{ctx.user.mention} Great job on reaching level {level}!\n"
-                f"You earned ${rewards:,}"
+                f"You earned {rewards:,} coins."
             )
         else:
             await ctx.respond(f"{ctx.user.mention} You are now level {level}!")
@@ -80,16 +80,16 @@ class MoneyGame(commands.Cog):
         chance = random.random()
         if chance < 0.4:        # 40% chance
             earnings = random.randint(60,300)
-            message = "You got ${0:,}, cool. Better than nothing."
+            message = "You got {0:,} coins, cool. Better than nothing."
         elif chance < 0.54:     # 14% chance
             earnings = random.randint(600,850)
-            message = "Damn, you got ${0:,}? May be your lucky day."
+            message = "Damn, you got {0:,} coins? May be your lucky day."
         elif chance < 0.592:    # 5.2% chance
             earnings = random.randint(1200,1800)
-            message = "${0:,}?? Holy COW, that's a lot of money!"
+            message = "{0:,} COINS?? Holy COW, that's a lot of money!"
         elif chance < 0.6:      # 0.8% chance
             earnings = random.randint(3000,6000)
-            message = "**WTF YOU GOT ${0:,}, HOW THE HELL???????**"
+            message = "**WTF YOU GOT {0:,} COINS, HOW THE HELL???????**"
         else:
             earnings = 0
             message = "Lmao, you got ignored. You got ${0}"
@@ -129,13 +129,13 @@ class MoneyGame(commands.Cog):
         success = True
         if chance > 0.992:
             portion = 1
-            message = "🤑 WTF YOU STOLE **EVERYTHING** (${0:,}), Gai Loooooo"
+            message = "🤑 WTF YOU STOLE **EVERYTHING** ({0:,} coins!), Gai Loooooo"
         elif chance > 0.95:
             portion = random.uniform(0.5, 0.75)
-            message = "💰 You stole a lot of money leh, you got ${0:,}, happy ma?"
+            message = "💰 You stole a lot of money leh, you got {0:,} coins, happy ma?"
         elif chance > 0.6:
             portion = random.uniform(0, 0.35)
-            message = "💸 You stole some money and quietly left... you got ${0:,}."
+            message = "💸 You stole some money and quietly left... you got {0:,} coins."
         else:
             success = False
 
@@ -144,7 +144,7 @@ class MoneyGame(commands.Cog):
             await ctx.respond(message.format(stolen_money))
         else:
             stolen_money = - max(200, round(stealer.wallet * 0.05))
-            await ctx.respond(f"Oof, you kena tangkap lol. You paid {target.display_name} ${abs(stolen_money):,} for trying to rob them.")
+            await ctx.respond(f"Oof, you kena tangkap lol. You paid {target.display_name} {abs(stolen_money):,} coins for trying to rob them.")
         
         await stealer.add_wallet(stolen_money)
         await victim.add_wallet(- stolen_money)
@@ -167,10 +167,10 @@ class MoneyGame(commands.Cog):
             return await ctx.respond("You don't have any money to share.")
     
         if amount > donor.wallet:
-            return await ctx.respond(f"You cannot share more than what you have (${donor.wallet:,})")
+            return await ctx.respond(f"You cannot share more than what you have ({donor.wallet:,} coins)")
 
         embed = ConfirmEmbed(
-            f"Are you sure you want to give ${amount:,} to {target.name}?",
+            f"Are you sure you want to give {amount:,} coins to {target.name}?",
             ("Current Balance", f"${donor.wallet:,}", True),
             ("New Balance", f"${(donor.wallet - amount):,}", True)
         )
@@ -180,7 +180,7 @@ class MoneyGame(commands.Cog):
         if not view.result:
             return
         
-        await ctx.respond(f"{ctx.user.display_name} has gave {target.display_name} ${amount:,}!")
+        await ctx.respond(f"{ctx.user.display_name} has gave {target.display_name} {amount:,} coins!")
         await donor.add_wallet(- amount)
         await receiver.add_wallet(amount)
         ctx.level_data = await donor.add_exp(10)
