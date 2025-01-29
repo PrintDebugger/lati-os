@@ -1,14 +1,14 @@
 import discord
 
-class Confirm(discord.ui.View):
-    def __init__(self, user:discord.User, embed):
+class ConfirmAction(discord.ui.View):
+    def __init__(self, sender:discord.Member, embed):
         super().__init__(timeout=30)
-        self.user = user
+        self.sender = sender
         self.embed = embed
-        self.result = None
+        self.result = False
 
     async def interaction_check(self, interaction: discord.Interaction):
-        if interaction.user != self.user:
+        if interaction.user != self.sender:
             await interaction.response.send_message("This confirmation isn't for you!", ephemeral=True)
             return False
         else:
@@ -23,7 +23,6 @@ class Confirm(discord.ui.View):
         
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
     async def cancel(self, button:discord.ui.Button, interaction:discord.Interaction):
-        self.result = False
         self.disable_all_items()
         self.children[1].style = discord.ButtonStyle.gray
         self.embed.title = "Action Cancelled"
@@ -42,12 +41,14 @@ class Confirm(discord.ui.View):
         self.stop()
 
 
-async def send_confirmation(ctx, user: discord.Member, message, followup=False):
-    embed = discord.Embed(title="Pending Confirmation", description=message, color=discord.Colour.yellow())
-    view = Confirm(user, embed)
-    if followup:
-        view.message = await ctx.followup.send(embed=embed, view=view)
-    else:
-        view.message = await ctx.respond(embed=embed, view=view)
-    await view.wait()
-    return view.result
+class ConfirmEmbed(discord.Embed):
+    
+    def __init__(self, message, *fields: tuple):
+        super().__init__(
+            title = "Pending Confirmation",
+            description = message,
+            color = discord.Colour.yellow()
+        )
+
+        for name, value, inline in fields:
+            self.add_field(name=name, value=value, inline=inline)

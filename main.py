@@ -1,56 +1,56 @@
 import os
-import time
-import discord
 from dotenv import load_dotenv
+import discord
+from discord.ext import commands
 
-from cogs.misc import Delivery
-from utils import log, initialise_db
-from bot import LatiBot
+from utils import log
+
 
 load_dotenv()
 TOKEN = os.environ['BOT_TOKEN']
 
 
-bot = LatiBot(debug_guilds=[1214372737313931304])
+class LatiBot(discord.Bot):
 
+    def __init__(self, debug_guilds=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.debug_guilds = debug_guilds or []
 
-#    Misc commands
+    async def on_ready(self):
+        await self.sync_commands()
+        log(f"{self.user} has connected to Discord")
 
-@bot.command()
-async def ping(ctx):
-    """Shows my latency."""
-    start_time = time.perf_counter()
-    msg = await ctx.respond("Pong!")
-    response = (time.perf_counter() - start_time) * 1000
+    async def on_application_command_error(self, ctx: discord.ApplicationContext, error):
+        if isinstance(error, commands.errors.CommandOnCooldown):
+            return await ctx.respond(embed=discord.Embed(
+                description = f"You can use this command again in **{round(error.retry_after):,} seconds**"
+            ))
+        
+        if isinstance(error, discord.errors.CheckFailure):
+            return
 
-    start_time = time.perf_counter()
-    await msg.edit(content="Pong!\nInitial response: {0:.2f}ms".format(response))
-    latency = (time.perf_counter() - start_time) * 1000
-
-    await msg.edit(content="Pong!\nInitial response: {0:.2f}ms\nRound-trip latency: {1:.2f}ms".format(response, latency))
-
-@bot.command()
-async def gacha(ctx):
-    """A simulation of Pokemon Cafe Remix's delivery feature."""
-    embed = discord.Embed(
-        color = 0x00aafc,
-        title = "Delivery Simulator",
-        description = "{0} It's time to hunt some pelicans.".format(ctx.user.mention),
-    )
-    view = Delivery(ctx.user, embed)
-    await ctx.respond(embed=embed, view=view)
+        await ctx.respond(embed=discord.Embed(
+            title = "Uh oh...",
+            description = f"An error occured while trying to run the `/{ctx.command}` command."
+        ))
+        log(f"❌ Command {ctx.command} raised an exception:\n{str(error)}")
 
 
 #   Load cogs
 cogs = [
+    'cogs.misc.commands',
     'cogs.moneygame.commands',
-    'cogs.ai.commands'
+    #'cogs.ai.commands'
 ]
 
+bot = LatiBot(debug_guilds=[1214372737313931304])
+
 for cog in cogs:
-    bot.load_extension(cog)
-    log("Loaded extension {0}".format(cog))
+    try:
+        bot.load_extension(cog)
+        log(f"Loaded extension {cog}")
+    except Exception as e:
+        log(f"❌ ERROR: Failed to load extension {cog}")
+        print(e)
 
-
-initialise_db()
 bot.run(TOKEN)

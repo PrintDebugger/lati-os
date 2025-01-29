@@ -1,16 +1,18 @@
 #   Fetch userdata through a discord user ID
 
+from cogs.moneygame import MoneyItem
 from utils import execute_query, log
 
-class UserData:
+class MoneyUser:
     
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: int): # Loads empty cache values
         self.id = user_id
         self._has_account = None
         self._wallet = None
         self._bank = None
         self._level = None
         self._exp = None
+        self._items = None
                 
     @property
     def has_account(self) -> bool:
@@ -47,22 +49,35 @@ class UserData:
             self._exp = data[0] if data else 0
         return self._exp
     
+    @property
+    def items(self) -> dict:
+        if self._items is None:
+            data = execute_query("SELECT items from users where id = %s", (self.id,), fetch='one')
+            self._items = (data[0] if data else {}) or {}
+        return self._items.copy()
+    
+
     def load_all(self):
         try:
             data = execute_query("SELECT wallet, bank, level, exp from users where id = %s", (self.id,), fetch='one')
             self._wallet, self._bank, self._level, self._exp = data
         except Exception as e:
-            log(f"[{self.id}] ❌ ERROR: Failed to fetch data:\n{str(e)}")
+            log(f"[{self.id}] ❌ Failed to fetch data:\n{str(e)}")
+
 
     def create_account(self):
         try:
             execute_query("INSERT INTO users (id) VALUES (%s)", (self.id,))
             self._has_account = True
             self._wallet = 10000
+            self._bank = 0
+            self._level = 1
+            self._exp = 0
+            self._items = {}
         except Exception as e:
-            log(f"[{self.id}] ❌ ERROR: Failed to create account:\n{str(e)}")
-
+            log(f"[{self.id}] ❌ Failed to create account:\n{str(e)}")
     
+
     async def add_wallet(self, amount):
         try:
             data = execute_query("UPDATE users SET wallet = wallet + %s WHERE id = %s RETURNING wallet", (amount, self.id,), fetch='one')
@@ -70,7 +85,8 @@ class UserData:
             old_wallet = self._wallet - amount
             log(f"[{self.id}] Updated wallet: {old_wallet} -> {self._wallet}")
         except Exception as e:
-            log(f"[{self.id}] ❌ ERROR: Failed to update wallet:\n{str(e)}")
+            log(f"[{self.id}] ❌ Failed to update wallet:\n{str(e)}")
+
 
     async def add_bank(self, amount):
         try:
@@ -80,12 +96,13 @@ class UserData:
                 fetch='one'
             )
             self._wallet, self._bank = data
-            old_wallet = self._wallet + amount
-            old_bank = self._bank - amount
+            old_wallet = self.wallet + amount
+            old_bank = self.bank - amount
             log(f"[{self.id}] updated wallet: {old_wallet} -> {self._wallet}, bank: {old_bank} -> {self._bank}")
         except Exception as e:
-            log(f"[{self.id}] ❌ ERROR: Bank transfer failed:\n{str(e)}")
+            log(f"[{self.id}] ❌ Bank transfer failed:\n{str(e)}")
             
+
     async def add_exp(self, amount):
         data = execute_query("SELECT wallet, level, exp FROM users WHERE id = %s FOR UPDATE", (self.id,), fetch='one')
         old_wallet, level, exp = data
@@ -114,12 +131,64 @@ class UserData:
         else:
             log(f"[{self.id}] added {amount} exp")
 
-        level_up = level > old_level
         return {
-            'hasLeveledUp': level_up,
-            'level': self._level,
+            'hasLeveledUp': level > old_level,
+            'level': self.level,
             'rewards': rewards
         }
     
+    
     def calculate_cash_multi(self):
         return 0.96 + self.level * 0.04
+    
+    
+    async def add_item(self, item_id: int, amount: int):
+        if amount == 0:
+            raise ValueError("Amount cannot be zero")
+        
+        if MoneyItem.from_id(item_id) is None:
+            raise ValueError(f"item_id {item_id} does not exist")
+
+        try:
+            updated_items = execute_query("""
+                WITH current_data AS (SELECT items FROM users WHERE id = %s FOR UPDATE)
+                UPDATE users SET items =
+                    CASE
+                        WHEN (items->>%s)::int + %s < 0 THEN
+                            items               -- Prevent negative value
+                        WHEN (items->>%s)::int + %s = 0 THEN
+                            items - %s          -- Remove key
+                        ELSE
+                            jsonb_set(
+                                COALESCE(items, '{}'::jsonb),
+                                ARRAY[%s],
+                                to_jsonb(
+                                    COALESCE((items->>%s)::int, 0) + %s
+                                )
+                            )
+                    END
+                WHERE id = %s
+                RETURNING COALESCE(items, '{}'::jsonb)
+            """, (
+                self.id,
+                str(item_id), amount,
+                str(item_id), amount,
+                str(item_id),
+                str(item_id),
+                str(item_id), amount,
+                self.id,
+            ), fetch='one')
+
+            #   Update cache
+            self._items = updated_items[0]
+            
+            #   Logging
+            new_item_amount = self._items[str(item_id)]
+            if new_item_amount:
+                log(f"[{self.id}] updated item {MoneyItem.from_id(item_id).name} (id {item_id}): {new_item_amount - amount} -> {new_item_amount}")
+            else:
+                log(f"[{self.id}] updated item {MoneyItem.from_id(item_id).name} (id {item_id}): {- amount} -> 0")
+
+        except:
+            log(f"[{self.id}] ❌ Failed to update item with id {item_id}")
+            raise
