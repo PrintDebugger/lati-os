@@ -4,8 +4,8 @@ from discord.ext import commands
 
 from cogs.moneygame import MoneyUser, ShopEmbed, Shop
 from cogs.moneygame.constants import *
-from cogs.moneygame.templates import EmbedProfile, Inventory
-from interactions import send_confirmation
+from cogs.moneygame.templates import EmbedProfile, Inventory, BankBalance
+from interactions import ConfirmAction, ConfirmEmbed
 from utils import initialise_db
 
 
@@ -169,14 +169,15 @@ class MoneyGame(commands.Cog):
         if amount > donor.wallet:
             return await ctx.respond(f"You cannot share more than what you have (${donor.wallet:,})")
 
-        result = await send_confirmation( 
-            "Are you sure you want to give ${0:,} to {1}?\n\n${2:,}  ►  ${3:,}".format(
-                amount, target.name, donor.wallet, donor.wallet - amount
-            ),
-            user = ctx.user,
-            ctx = ctx
+        embed = ConfirmEmbed(
+            f"Are you sure you want to give ${amount:,} to {target.name}?",
+            ("Current Balance", f"${donor.wallet:,}", True),
+            ("New Balance", f"${(donor.wallet - amount):,}", True)
         )
-        if not result == True:
+        view = ConfirmAction(ctx.user, embed)
+        view.message = await ctx.respond(embed=embed, view=view)
+        await view.wait()
+        if not view.result:
             return
         
         await ctx.respond(f"{ctx.user.display_name} has gave {target.display_name} ${amount:,}!")
@@ -194,10 +195,10 @@ class MoneyGame(commands.Cog):
         """Deposit some money into the bank."""
         user = MoneyUser(ctx.user.id)
         if amount > user.wallet:
-            return await ctx.respond(f"Your wallet has only ${user.wallet:,}")
+            return await ctx.respond(f"Your wallet has only {user.wallet:,} coins")
 
         await user.add_bank(amount)
-        await ctx.respond(f"Deposited ${amount:,}, your bank now has ${user.bank:,}")
+        await ctx.respond(embed=BankBalance("Deposited", amount, user))
         ctx.level_data = await user.add_exp(10)
 
 
@@ -208,10 +209,10 @@ class MoneyGame(commands.Cog):
         """Withdraw some money from the bank."""
         user = MoneyUser(ctx.user.id)
         if amount > user.bank:
-            return await ctx.respond(f"Your bank has only ${user.bank:,}")
+            return await ctx.respond(f"Your bank has only {user.bank:,} coins")
 
         await user.add_bank(- amount)
-        await ctx.respond(f"Withdrawn ${amount:,}, your bank now has ${user.bank:,}")
+        await ctx.respond(embed=BankBalance("Withdrew", amount, user))
         ctx.level_data = await user.add_exp(10)
 
 
@@ -233,7 +234,8 @@ class MoneyGame(commands.Cog):
     async def shop(self, ctx):
         '''Buy some items.'''
         user = MoneyUser(ctx.user.id)
-        await ctx.respond(embed=ShopEmbed(user), view=Shop(ctx.user, user))
+        view = Shop(ctx.user, user)
+        view.message = await ctx.respond(embed=ShopEmbed(user), view=view)
         
 
 def setup(bot): # Pycord calls this function to setup this cog

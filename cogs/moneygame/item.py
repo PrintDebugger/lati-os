@@ -42,6 +42,7 @@ class MoneyItem:
             item = cls()
             item.id = item_id
             item.name = data['name']
+            item.emoji = data['emoji']
             item.use = data['use']
             item.description = data['description']
             item.sell_price = data['sell']

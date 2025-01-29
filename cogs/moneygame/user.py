@@ -56,12 +56,14 @@ class MoneyUser:
             self._items = (data[0] if data else {}) or {}
         return self._items.copy()
     
+
     def load_all(self):
         try:
             data = execute_query("SELECT wallet, bank, level, exp from users where id = %s", (self.id,), fetch='one')
             self._wallet, self._bank, self._level, self._exp = data
         except Exception as e:
             log(f"[{self.id}] ❌ Failed to fetch data:\n{str(e)}")
+
 
     def create_account(self):
         try:
@@ -75,6 +77,7 @@ class MoneyUser:
         except Exception as e:
             log(f"[{self.id}] ❌ Failed to create account:\n{str(e)}")
     
+
     async def add_wallet(self, amount):
         try:
             data = execute_query("UPDATE users SET wallet = wallet + %s WHERE id = %s RETURNING wallet", (amount, self.id,), fetch='one')
@@ -83,6 +86,7 @@ class MoneyUser:
             log(f"[{self.id}] Updated wallet: {old_wallet} -> {self._wallet}")
         except Exception as e:
             log(f"[{self.id}] ❌ Failed to update wallet:\n{str(e)}")
+
 
     async def add_bank(self, amount):
         try:
@@ -98,6 +102,7 @@ class MoneyUser:
         except Exception as e:
             log(f"[{self.id}] ❌ Bank transfer failed:\n{str(e)}")
             
+
     async def add_exp(self, amount):
         data = execute_query("SELECT wallet, level, exp FROM users WHERE id = %s FOR UPDATE", (self.id,), fetch='one')
         old_wallet, level, exp = data
@@ -131,6 +136,7 @@ class MoneyUser:
             'level': self.level,
             'rewards': rewards
         }
+    
     
     def calculate_cash_multi(self):
         return 0.96 + self.level * 0.04
