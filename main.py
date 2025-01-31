@@ -43,7 +43,7 @@ cogs = [
     'cogs.ai.commands'
 ]
 
-bot = LatiBot(debug_guilds=[1214372737313931304])
+bot = LatiBot(debug_guilds=[1214372737313931304, 896571794591477802])
 
 for cog in cogs:
     try:
