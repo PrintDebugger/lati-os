@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from psycopg_pool import ConnectionPool
 
+
 load_dotenv()
 
 PGHOST = os.environ['PGHOST']
@@ -10,6 +11,7 @@ PGUSER = os.environ['PGUSER']
 PGPASSWORD = os.environ['PGPASSWORD']
 PGDATABASE = os.environ['PGDATABASE']
 PGPORT = os.environ['PGPORT']
+
 
 #   Initialise the connection pool
 pool = ConnectionPool(
@@ -21,10 +23,11 @@ pool = ConnectionPool(
 #   Register cleanup
 atexit.register(pool.close)
 
+
 def initialise_db():
-    from utils import log
     
     # Connect to PostgreSQL
+    from utils import logger
     try:
         with pool.connection() as conn:
             with conn.cursor() as cursor:
@@ -43,13 +46,13 @@ def initialise_db():
                     ALTER TABLE users ADD COLUMN IF NOT EXISTS activeItems JSONB DEFAULT '{}'::jsonb;
                 """)
                 conn.commit()
-        log(f"Connected to PostgreSQL database '{PGDATABASE}' at {PGHOST}:{PGPORT}")
-    
-    except Exception as e:
-        log(f"❌ Could not connect to PostgreSQL database:\n{str(e)}")
-        raise
+        logger.info(f"Connected to PostgreSQL database '{PGDATABASE}' at {PGHOST}:{PGPORT}")   
+    except Exception:
+        logger.critical(f"Could not connect to PostgreSQL database")
+
 
 def execute_query(query, params=(), fetch=None):
+    from utils import logger
     try:
         with pool.connection() as conn:
             with conn.cursor() as cursor:
@@ -64,6 +67,5 @@ def execute_query(query, params=(), fetch=None):
                 # For INSERT, UPDATE, DELETE, return True if any rows were affected
                 else:
                     return cursor.rowcount
-    except Exception as e:
-        print(f"In execute_query: {str(e)}")
-        raise
+    except Exception:
+        logger.exception("Exception in database query")

@@ -23,10 +23,6 @@ def detect_ai(image_url: str):
         )
         response.raise_for_status()
         return response.json()
-    except requests.exceptions.Timeout:
-        log("❌ ERROR: In \"detect_ai\" - Request Timed Out")
-        return None
-    except Exception as e:
-        log("❌ ERROR: In \"detect_ai\"")
-        print(e)
+    except Exception:
+        log.exception("Exception in 'sightengine.py'")
         return None

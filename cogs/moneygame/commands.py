@@ -1,12 +1,12 @@
-import discord
 import random
+import discord
 from discord.ext import commands
 
-from cogs.moneygame import MoneyUser, ShopEmbed, Shop
+from cogs.moneygame import MoneyUser, MoneyItem, ShopEmbed, Shop
 from cogs.moneygame.constants import *
-from cogs.moneygame.templates import EmbedProfile, Inventory, BankBalance
+from cogs.moneygame.templates import EmbedProfile, Inventory, ItemInfo, BankBalance
 from interactions import ConfirmAction, ConfirmEmbed
-from utils import initialise_db
+from utils import initialise_db, logger
 
 
 class MoneyGame(commands.Cog):
@@ -15,11 +15,12 @@ class MoneyGame(commands.Cog):
         self.bot = bot
 
 
-    async def cog_before_invoke(self, ctx): # Some commands require an account i.e. a MoneyUser to be used
+    async def cog_before_invoke(self, ctx): # Add user data if they don't have any
         user = MoneyUser(ctx.user.id)
 
         if not user.has_account:
             user.create_account()
+
 
     async def cog_after_invoke(self, ctx): # Send level up message after a command (if the user levels up)
         if not hasattr(ctx, 'level_data'):
@@ -38,6 +39,7 @@ class MoneyGame(commands.Cog):
         else:
             await ctx.respond(f"{ctx.user.mention} You are now level {level}!")
 
+
     def level_limit(level: int): # Some commands require the user's level to be a certain amount 
         async def predicate(ctx):
             user = MoneyUser(ctx.user.id)
@@ -47,7 +49,7 @@ class MoneyGame(commands.Cog):
             else:
                 return True
         return discord.ext.commands.check(predicate)
-    
+
 
     #   COMMANDS
 
@@ -92,7 +94,7 @@ class MoneyGame(commands.Cog):
             message = "**WTF YOU GOT {0:,} COINS, HOW THE HELL???????**"
         else:
             earnings = 0
-            message = "Lmao, you got ignored. You got ${0}"
+            message = "Lmao, you got ignored. You got {0} coins"
 
         user = MoneyUser(ctx.user.id)
         earnings = int(earnings * user.calculate_cash_multi())
@@ -115,10 +117,10 @@ class MoneyGame(commands.Cog):
             return await ctx.respond("You cannot steal from the bot because it is in the 4th dimension")
         
         stealer = MoneyUser(ctx.user.id)
-        victim = MoneyUser(target.id)
         if stealer.wallet < ROB_MIN_AMOUNT:
             return await ctx.respond(f"You need at least ${ROB_MIN_AMOUNT} to steal, or else you end up in jail")
 
+        victim = MoneyUser(target.id)
         if victim.level < ROB_MIN_LEVEL:
             return await ctx.respond(f"You cannot steal from someone who isn't Level {ROB_MIN_LEVEL} yet.")
         
@@ -171,11 +173,11 @@ class MoneyGame(commands.Cog):
 
         embed = ConfirmEmbed(
             f"Are you sure you want to give {amount:,} coins to {target.name}?",
-            ("Current Balance", f"${donor.wallet:,}", True),
-            ("New Balance", f"${(donor.wallet - amount):,}", True)
+            ("Current Balance", f"{COIN} `{donor.wallet:,}`", True),
+            ("New Balance", f"{COIN} `{(donor.wallet - amount):,}`", True)
         )
         view = ConfirmAction(ctx.user, embed)
-        view.message = await ctx.respond(embed=embed, view=view)
+        view.message = await ctx.respond(ctx.user.mention, embed=embed, view=view)
         await view.wait()
         if not view.result:
             return
@@ -184,7 +186,7 @@ class MoneyGame(commands.Cog):
         await donor.add_wallet(- amount)
         await receiver.add_wallet(amount)
         ctx.level_data = await donor.add_exp(10)
-            
+
 
     bank = discord.SlashCommandGroup("bank", "Bank operations")
 
@@ -236,7 +238,23 @@ class MoneyGame(commands.Cog):
         user = MoneyUser(ctx.user.id)
         view = Shop(ctx.user, user)
         view.message = await ctx.respond(embed=ShopEmbed(user), view=view)
-        
+    
+
+    @discord.slash_command()
+    @discord.option(
+        "name", str,
+        description = "The name of the item.", 
+        autocomplete = MoneyItem.get_matching_items
+    )
+    async def item(self, ctx, name):
+        '''View the details of an item.'''
+        try:
+            item = MoneyItem.from_name(name)
+            amount = MoneyUser(ctx.user.id).items.get(str(item.id), 0)
+        except Exception:
+            logger.exception("Failed to fetch item info")
+        await ctx.respond(embed=ItemInfo(item, amount))
+
 
 def setup(bot): # Pycord calls this function to setup this cog
     initialise_db()

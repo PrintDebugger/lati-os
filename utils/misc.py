@@ -1,8 +1,12 @@
-from datetime import datetime
+import logging
 
-def log(message):
-    formatted_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print("[{0}] {1}".format(formatted_time, message))
+
+logger = logging.getLogger('logger')
+logger.setLevel(logging.DEBUG)
+console_handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 
 
 PBAR_SKINS = {

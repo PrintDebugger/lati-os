@@ -74,3 +74,14 @@ class Inventory(discord.Embed):
             item_list.append((item, amount))
 
         return sorted(item_list, key=lambda x:x[0].name)
+
+
+class ItemInfo(discord.Embed):
+    def __init__(self, item:MoneyItem, amount:int):
+        super().__init__(
+            title = f"{item.name} ({amount})",
+            description = f"> *{item.description}*\n\n{item.use}"
+        )
+        self.add_field(name="Sell for", value=f"{COIN} `{item.sell_price:,}`")
+        self.set_footer(text=f"{item.rarity} {item.type}")
+        self.set_thumbnail(url=discord.PartialEmoji.from_str(item.emoji).url)
