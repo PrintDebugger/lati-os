@@ -1,7 +1,7 @@
 #   Fetch userdata through a discord user ID
 
 from cogs.moneygame import MoneyItem
-from utils import execute_query, log
+from utils import execute_query, logger
 
 class MoneyUser:
     
@@ -61,8 +61,8 @@ class MoneyUser:
         try:
             data = execute_query("SELECT wallet, bank, level, exp from users where id = %s", (self.id,), fetch='one')
             self._wallet, self._bank, self._level, self._exp = data
-        except Exception as e:
-            log(f"[{self.id}] ❌ Failed to fetch data:\n{str(e)}")
+        except Exception:
+            logger.exception(f"{self.id} - Failed to fetch data")
 
 
     def create_account(self):
@@ -74,8 +74,8 @@ class MoneyUser:
             self._level = 1
             self._exp = 0
             self._items = {}
-        except Exception as e:
-            log(f"[{self.id}] ❌ Failed to create account:\n{str(e)}")
+        except Exception:
+            logger.exception(f"{self.id} - Failed to create account")
     
 
     async def add_wallet(self, amount):
@@ -83,9 +83,9 @@ class MoneyUser:
             data = execute_query("UPDATE users SET wallet = wallet + %s WHERE id = %s RETURNING wallet", (amount, self.id,), fetch='one')
             self._wallet = data[0]
             old_wallet = self._wallet - amount
-            log(f"[{self.id}] Updated wallet: {old_wallet} -> {self._wallet}")
-        except Exception as e:
-            log(f"[{self.id}] ❌ Failed to update wallet:\n{str(e)}")
+            logger.info(f"{self.id} - updated wallet: {old_wallet} -> {self._wallet}")
+        except Exception:
+            logger.exception(f"{self.id} - Failed to update wallet")
 
 
     async def add_bank(self, amount):
@@ -98,9 +98,9 @@ class MoneyUser:
             self._wallet, self._bank = data
             old_wallet = self.wallet + amount
             old_bank = self.bank - amount
-            log(f"[{self.id}] updated wallet: {old_wallet} -> {self._wallet}, bank: {old_bank} -> {self._bank}")
-        except Exception as e:
-            log(f"[{self.id}] ❌ Bank transfer failed:\n{str(e)}")
+            logger.info(f"{self.id} - updated wallet: {old_wallet} -> {self._wallet}, bank: {old_bank} -> {self._bank}")
+        except Exception:
+            logger.exception(f"{self.id} - Failed to update bank")
             
 
     async def add_exp(self, amount):
@@ -127,9 +127,9 @@ class MoneyUser:
         self._exp = exp
 
         if rewards > 0:
-            log(f"[{self.id}] added {amount} exp, updated wallet: {old_wallet} -> {self._wallet}")
+            logger.info(f"{self.id} - added {amount} exp, updated wallet: {old_wallet} -> {self._wallet}")
         else:
-            log(f"[{self.id}] added {amount} exp")
+            logger.info(f"{self.id} - added {amount} exp")
 
         return {
             'hasLeveledUp': level > old_level,
@@ -155,16 +155,14 @@ class MoneyUser:
                 UPDATE users SET items =
                     CASE
                         WHEN (items->>%s)::int + %s < 0 THEN
-                            items               -- Prevent negative value
+                            items               -- Prevent negative value, don't change
                         WHEN (items->>%s)::int + %s = 0 THEN
                             items - %s          -- Remove key
                         ELSE
                             jsonb_set(
                                 COALESCE(items, '{}'::jsonb),
                                 ARRAY[%s],
-                                to_jsonb(
-                                    COALESCE((items->>%s)::int, 0) + %s
-                                )
+                                to_jsonb(COALESCE((items->>%s)::int, 0) + %s)
                             )
                     END
                 WHERE id = %s
@@ -185,10 +183,10 @@ class MoneyUser:
             #   Logging
             new_item_amount = self._items[str(item_id)]
             if new_item_amount:
-                log(f"[{self.id}] updated item {MoneyItem.from_id(item_id).name} (id {item_id}): {new_item_amount - amount} -> {new_item_amount}")
+                logger.info(f"{self.id} - updated item {MoneyItem.from_id(item_id).name} (id {item_id}): {new_item_amount - amount} -> {new_item_amount}")
             else:
-                log(f"[{self.id}] updated item {MoneyItem.from_id(item_id).name} (id {item_id}): {- amount} -> 0")
+                logger.info(f"{self.id} - updated item {MoneyItem.from_id(item_id).name} (id {item_id}): {- amount} -> 0")
 
-        except:
-            log(f"[{self.id}] ❌ Failed to update item with id {item_id}")
+        except Exception:
+            logger.exception(f"{self.id} - Failed to update item with id {item_id}")
             raise

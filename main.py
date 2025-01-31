@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import discord
 from discord.ext import commands
 
-from utils import log
+from utils import logger
 
 
 load_dotenv()
@@ -18,7 +18,7 @@ class LatiBot(discord.Bot):
 
     async def on_ready(self):
         await self.sync_commands()
-        log(f"{self.user} has connected to Discord")
+        logger.info(f"{self.user} has connected to Discord")
 
     async def on_application_command_error(self, ctx: discord.ApplicationContext, error):
         if isinstance(error, commands.errors.CommandOnCooldown):
@@ -33,7 +33,7 @@ class LatiBot(discord.Bot):
             title = "Uh oh...",
             description = f"An error occured while trying to run the `/{ctx.command}` command."
         ))
-        log(f"❌ Command {ctx.command} raised an exception:\n{str(error)}")
+        logger.error(f"Error in command {ctx.command}")
 
 
 #   Load cogs
@@ -48,9 +48,8 @@ bot = LatiBot(debug_guilds=[1214372737313931304])
 for cog in cogs:
     try:
         bot.load_extension(cog)
-        log(f"Loaded extension {cog}")
-    except Exception as e:
-        log(f"❌ ERROR: Failed to load extension {cog}")
-        print(e)
+        logger.info(f"Loaded extension {cog}")
+    except Exception:
+        logger.critical(f"Failed to load extension {cog}", exc_info=True)
 
 bot.run(TOKEN)
