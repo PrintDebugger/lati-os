@@ -8,7 +8,7 @@ API_USER = os.environ['SIGHTENGINE_API_USER']
 API_SECRET = os.environ['SIGHTENGINE_API_SECRET']
 
 def detect_ai(image_url: str):
-    from utils import log
+    from utils import logger
     
     try:
         response = requests.get(
@@ -24,5 +24,5 @@ def detect_ai(image_url: str):
         response.raise_for_status()
         return response.json()
     except Exception:
-        log.exception("Exception in 'sightengine.py'")
+        logger.exception("Exception in 'sightengine.py'")
         return None

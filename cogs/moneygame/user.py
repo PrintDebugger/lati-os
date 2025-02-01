@@ -181,11 +181,8 @@ class MoneyUser:
             self._items = updated_items[0]
             
             #   Logging
-            new_item_amount = self._items[str(item_id)]
-            if new_item_amount:
-                logger.info(f"{self.id} - updated item {MoneyItem.from_id(item_id).name} (id {item_id}): {new_item_amount - amount} -> {new_item_amount}")
-            else:
-                logger.info(f"{self.id} - updated item {MoneyItem.from_id(item_id).name} (id {item_id}): {- amount} -> 0")
+            new_item_amount = self._items.get(str(item_id), 0)
+            logger.info(f"{self.id} - updated item {MoneyItem.from_id(item_id).name} (id {item_id}): {new_item_amount - amount} -> {new_item_amount}")
 
         except Exception:
             logger.exception(f"{self.id} - Failed to update item with id {item_id}")

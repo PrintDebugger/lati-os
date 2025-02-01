@@ -2,7 +2,7 @@ import random
 import discord
 from discord.ext import commands
 
-from cogs.moneygame import MoneyUser, MoneyItem, ShopEmbed, Shop
+from cogs.moneygame import MoneyUser, MoneyItem, LuckHandler, ShopEmbed, Shop
 from cogs.moneygame.constants import *
 from cogs.moneygame.templates import EmbedProfile, Inventory, ItemInfo, BankBalance
 from interactions import ConfirmAction, ConfirmEmbed
@@ -71,38 +71,37 @@ class MoneyGame(commands.Cog):
     @commands.cooldown(1, 5, commands.BucketType.user)
     async def beg(self, ctx):
         """Beg for a small amount money."""
-        story = random.choice([
+        message = "> " + random.choice([
             "Someone walks past and notices you...",
             "You waited and waited... oh, someone's coming.",
             "You heard something... probably just the wind?",
             "You decided to breakdance and people thought you were a street performer... or a dumbass.",
             "You slept at the streets for the night."
-        ])
+        ]) + "\n"
 
         chance = random.random()
-        if chance < 0.4:        # 40% chance
-            earnings = random.randint(60,300)
-            message = "You got {0:,} coins, cool. Better than nothing."
-        elif chance < 0.54:     # 14% chance
-            earnings = random.randint(600,850)
-            message = "Damn, you got {0:,} coins? May be your lucky day."
-        elif chance < 0.592:    # 5.2% chance
-            earnings = random.randint(1200,1800)
-            message = "{0:,} COINS?? Holy COW, that's a lot of money!"
-        elif chance < 0.6:      # 0.8% chance
-            earnings = random.randint(3000,6000)
-            message = "**WTF YOU GOT {0:,} COINS, HOW THE HELL???????**"
-        else:
-            earnings = 0
-            message = "Lmao, you got ignored. You got {0} coins"
-
+        outcome = LuckHandler.get_outcome('beg', chance)
         user = MoneyUser(ctx.user.id)
-        earnings = int(earnings * user.calculate_cash_multi())
-        await ctx.respond(story + "\n" + message.format(earnings))
         ctx.level_data = await user.add_exp(10)
 
-        if earnings != 0:
-            await user.add_wallet(earnings)
+        if not outcome.success:
+            message += "* Lmao you got ignored. You got 0 coins"
+            return await ctx.respond(embed=discord.Embed(description=message, color=discord.Colour.brand_red()))
+
+        base_earnings = random.randint(*outcome.info['coinRange'])
+        earnings = int(base_earnings * user.calculate_cash_multi())
+        message += f"* You got {earnings:,} coins!"
+        await user.add_wallet(earnings)
+
+        if 'items' in outcome.info:
+            for item_id, x in outcome.info['items'].items():
+                if random.random() < x:
+                    get_item = MoneyItem.from_id(int(item_id))
+                    await user.add_item(int(item_id), 1)
+                    message += f"\n* You also got 1 {get_item.emoji} **{get_item.name}**!"
+                    break
+
+        await ctx.respond(embed=discord.Embed(description=message, color=discord.Colour.brand_green()))
 
 
     @discord.slash_command()
@@ -128,29 +127,24 @@ class MoneyGame(commands.Cog):
             return await ctx.respond(f"bro doesn't even have ${ROB_MIN_AMOUNT} leave him alone ba")
         
         chance = random.random()
-        success = True
-        if chance > 0.992:
-            portion = 1
-            message = "🤑 WTF YOU STOLE **EVERYTHING** ({0:,} coins!), Gai Loooooo"
-        elif chance > 0.95:
-            portion = random.uniform(0.5, 0.75)
-            message = "💰 You stole a lot of money leh, you got {0:,} coins, happy ma?"
-        elif chance > 0.6:
-            portion = random.uniform(0, 0.35)
-            message = "💸 You stole some money and quietly left... you got {0:,} coins."
+        outcome = LuckHandler.get_outcome('steal', chance)
+        if outcome.success:
+            portion = random.uniform(*outcome.info['amountRange'])
+            stolen = max(1, round(victim.wallet * portion))
+            message = outcome.info['message'].format(stolen)
+            color = discord.Colour.brand_green()
         else:
-            success = False
-
-        if success:
-            stolen_money = max(1, round(victim.wallet * portion))
-            await ctx.respond(message.format(stolen_money))
-        else:
-            stolen_money = - max(200, round(stealer.wallet * 0.05))
-            await ctx.respond(f"Oof, you kena tangkap lol. You paid {target.display_name} {abs(stolen_money):,} coins for trying to rob them.")
+            stolen = - max(200, round(stealer.wallet * 0.05))
+            message = (
+                "Oof, you kena tangkap lol.\n"
+                f"You paid {target.display_name} {abs(stolen):,} coins for trying to rob them."
+            )
+            color = discord.Colour.brand_red()
         
-        await stealer.add_wallet(stolen_money)
-        await victim.add_wallet(- stolen_money)
+        await stealer.add_wallet(stolen)
+        await victim.add_wallet(- stolen)
         ctx.level_data = await stealer.add_exp(10)
+        await ctx.respond(embed=discord.Embed(description=message, color=color))
 
 
     @discord.slash_command()
@@ -254,6 +248,40 @@ class MoneyGame(commands.Cog):
         except Exception:
             logger.exception("Failed to fetch item info")
         await ctx.respond(embed=ItemInfo(item, amount))
+
+
+    @discord.slash_command()
+    @discord.option(
+        "name", str,
+        description = "The name of the item.", 
+        autocomplete = MoneyItem.get_matching_items
+    )
+    @discord.option(
+        'amount', int,
+        description = "The amount you want to use.",
+        min_value = 1,
+        default = 1
+    )
+    async def use(self, ctx, name, amount):
+        '''Use an item.'''
+        user = MoneyUser(ctx.user.id)
+        item = MoneyItem.from_name(name)
+        item_id = item.id
+        user_has_amount = user.items.get(str(item_id), 0)
+
+        if amount > user_has_amount:
+            return await ctx.respond(embed=discord.Embed(
+                description = f"You only have {user_has_amount} {item.emoji} **{item.name}**"
+            ))
+        
+        #   oh god
+        if item_id == 1:
+            embed = discord.Embed(
+                color=None,
+                title="IT'S RAINING COINS",
+                description=f"{ctx.user.display_name} has fired a Gold Firework!\nClick the button to collect them!"
+            )
+            # send message
 
 
 def setup(bot): # Pycord calls this function to setup this cog
