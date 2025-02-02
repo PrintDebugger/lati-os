@@ -96,3 +96,10 @@ class ItemInfo(discord.Embed):
         self.add_field(name="Sell for", value=f"{COIN} `{item.sell_price:,}`")
         self.set_footer(text=f"{item.rarity} {item.type}")
         self.set_thumbnail(url=discord.PartialEmoji.from_str(item.emoji).url)
+
+class SingleItemMessage(discord.Embed):
+    def __init__(self, message:str, item:MoneyItem):
+        article = "an" if item.name[0] in "AEIOUaeiou" else "a"
+        super().__init__(
+            description = f"You used {article} {item.emoji} **{item.name}**!\n* {message}"
+        )

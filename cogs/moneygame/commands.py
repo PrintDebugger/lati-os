@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from cogs.moneygame import MoneyUser, MoneyItem, LuckHandler, ShopEmbed, Shop
 from cogs.moneygame.constants import *
-from cogs.moneygame.templates import EmbedProfile, Inventory, ItemInfo, BankBalance
+from cogs.moneygame.templates import EmbedProfile, Inventory, ItemInfo, BankBalance, SingleItemMessage
 from interactions import ConfirmAction, ConfirmEmbed
 from utils import initialise_db, logger
 
@@ -152,7 +152,13 @@ class MoneyGame(commands.Cog):
         if victim.wallet < ROB_MIN_AMOUNT:
             return await ctx.respond(f"bro doesn't even have {ROB_MIN_AMOUNT} coins leave him alone ba")
         
-        chance = random.random()
+        if "5" in victim.active_items:
+            message = "Huh? The user has a <:Padlock:1334139369400959016> **padlock** on their wallet!\n* You got caught! "
+            chance = 0
+        else:
+            message = "Lol, nice try. You got caught\n* " # fail message will be override if outcome.success is triggered
+            chance = random.random()
+
         outcome = LuckHandler.get_outcome('steal', chance)
         if outcome.success:
             portion = random.uniform(*outcome.info['amountRange'])
@@ -161,16 +167,22 @@ class MoneyGame(commands.Cog):
             color = discord.Colour.brand_green()
         else:
             stolen = - max(200, round(stealer.wallet * 0.05))
-            message = (
-                "Oof, you kena tangkap lol.\n"
-                f"You paid {target.name} {abs(stolen):,} coins for trying to rob them."
-            )
+            message += f"You paid {target.name} {abs(stolen):,} coins for trying to rob them."
             color = discord.Colour.brand_red()
 
         await ctx.respond(embed=discord.Embed(description=message, color=color))
         ctx.level_data = await stealer.add_exp(10)
         await stealer.add_wallet(stolen)
         await victim.add_wallet(- stolen)
+
+        #   10% to break their padlock
+        if "5" in victim.active_items and random.random() < 0.1:
+            await target.send(embed = discord.Embed(
+                title = "Your padlock broke!",
+                description = f"{ctx.user.name} broke your <:Padlock:1334139369400959016> **Padlock** while stealing from you in {ctx.channel.mention}!",
+                color = discord.Colour.brand_red()
+            ))
+            await victim.deactivate_item(5)
 
 
     @discord.slash_command()
@@ -328,13 +340,26 @@ class MoneyGame(commands.Cog):
             embed.add_field(name="Total Bank Space", value=f"{COIN} `{(user.max_bank + increase):,}`")
             await user.increase_max_bank(increase)
 
-        elif item_id == 3: # Save State
+        elif item_id == 3: # reviver
             return await ctx.respond("You're still alive! Save this item for later, 'kay?")
 
         elif item_id == 4: # apple
             amount = 1
-            effect_duration = 3 * 3600
-            embed = discord.Embed(description=f"You used an {item.emoji} **Apple**!\n* You are less likely to die for the next 3 hours.")
+            effect_duration = 10800
+            embed = SingleItemMessage("You are less likely to die for the next 3 hours.", item)
+
+        elif item_id == 5: # padlock
+            amount = 1
+            effect_duration = 7 * 86400
+            embed = SingleItemMessage("Your wallet is protected for 1 week.\n* Be careful though, your padlock may break if someone tries to steal from you.", item)
+
+        elif item_id == 6: # bomb trap
+            amount = 1
+            effect_duration = 86400
+            embed = SingleItemMessage("Anyone who tries to steal from you for the next 24 hours has a 50% chance to step on it and die.", item)
+
+        elif item_id == 7: # feather
+            return await ctx.respond("There's nothing useful about this feather. Consider selling it?")
 
         else:
             return await ctx.respond("You can't use this item yet. Please stand by!")
