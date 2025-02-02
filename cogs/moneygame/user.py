@@ -1,4 +1,5 @@
 #   Fetch userdata through a discord user ID
+import time
 
 from cogs.moneygame import MoneyItem
 from utils import execute_query, logger
@@ -10,9 +11,11 @@ class MoneyUser:
         self._has_account = None
         self._wallet = None
         self._bank = None
+        self._bank_bonus = None
         self._level = None
         self._exp = None
         self._items = None
+        self._active_items = None
                 
     @property
     def has_account(self) -> bool:
@@ -36,6 +39,13 @@ class MoneyUser:
         return self._bank
     
     @property
+    def bank_bonus(self) -> int:
+        if self._bank_bonus is None:
+            data = execute_query("SELECT bankBonus from users where id = %s", (self.id,), fetch='one')
+            self._bank_bonus = data[0] if data else 0
+        return self._bank_bonus
+    
+    @property
     def level(self) -> int:
         if self._level is None:
             data = execute_query("SELECT level from users where id = %s", (self.id,), fetch='one')
@@ -56,7 +66,21 @@ class MoneyUser:
             self._items = (data[0] if data else {}) or {}
         return self._items.copy()
     
-
+    @property
+    def active_items(self) -> dict:
+        if self._active_items is None:
+            data = execute_query("SELECT activeItems from users where id = %s", (self.id,), fetch='one')
+            self._active_items = (data[0] if data else {}) or {}
+        return self._active_items.copy()
+    
+    @property
+    def coin_multi(self) -> float:
+        return 0.96 + self.level * 0.04
+    
+    @property
+    def max_bank(self) -> int:
+        return int(self.level * (self.level + 1) / 2 - 1) * 256 + self.bank_bonus + 20000
+    
     def load_all(self):
         try:
             data = execute_query("SELECT wallet, bank, level, exp from users where id = %s", (self.id,), fetch='one')
@@ -101,6 +125,19 @@ class MoneyUser:
             logger.info(f"{self.id} - updated wallet: {old_wallet} -> {self._wallet}, bank: {old_bank} -> {self._bank}")
         except Exception:
             logger.exception(f"{self.id} - Failed to update bank")
+
+    
+    async def increase_max_bank(self, amount):
+        try:
+            data = execute_query(
+                "UPDATE users SET bankBonus = bankBonus + %s WHERE id = %s RETURNING bankBonus", 
+                (amount, self.id,),
+                fetch='one'
+            )
+            self._bank_bonus = data[0]
+            logger.info(f"{self.id} - increased bank cap by {amount}")
+        except Exception:
+            logger.exception(f"{self.id} - Failed to increase bank cap")
             
 
     async def add_exp(self, amount):
@@ -136,11 +173,7 @@ class MoneyUser:
             'level': self.level,
             'rewards': rewards
         }
-    
-    
-    def calculate_cash_multi(self):
-        return 0.96 + self.level * 0.04
-    
+
     
     async def add_item(self, item_id: int, amount: int):
         if amount == 0:
@@ -150,7 +183,7 @@ class MoneyUser:
             raise ValueError(f"item_id {item_id} does not exist")
 
         try:
-            updated_items = execute_query("""
+            data = execute_query("""
                 WITH current_data AS (SELECT items FROM users WHERE id = %s FOR UPDATE)
                 UPDATE users SET items =
                     CASE
@@ -178,7 +211,7 @@ class MoneyUser:
             ), fetch='one')
 
             #   Update cache
-            self._items = updated_items[0]
+            self._items = data[0]
             
             #   Logging
             new_item_amount = self._items.get(str(item_id), 0)
@@ -187,3 +220,53 @@ class MoneyUser:
         except Exception:
             logger.exception(f"{self.id} - Failed to update item with id {item_id}")
             raise
+
+    
+    async def activate_item(self, item_id: int, duration: int):
+        if duration <= 0:
+            raise ValueError("duration must be a positive integer")
+        
+        try:
+            data = execute_query("""
+                UPDATE users SET activeItems = jsonb_set(
+                    COALESCE(activeItems, '{}'::jsonb),
+                    ARRAY[%s],
+                    to_jsonb(COALESCE((activeItems->>%s)::int, %s) + %s)
+                ) 
+                WHERE id = %s
+                RETURNING COALESCE(activeItems, '{}'::jsonb)
+                """, (
+                    str(item_id),
+                    str(item_id), int(time.time()), duration,
+                    self.id,
+                ), fetch = 'one')
+            
+            # Update cache
+            self._active_items = data[0]
+
+            end_time = self._active_items[str(item_id)]
+            logger.info(f"{self.id} - Activated item {MoneyItem.from_id(item_id).name} (id {item_id}) ending at {end_time}")
+        except Exception:
+            logger.exception(f"Failed to activate item with id {item_id}")
+
+
+    async def deactivate_item(self, item_id):
+        if not str(item_id) in self._active_items:
+            raise ValueError(f"{item_id} was never activated")
+        
+        try:
+            data = execute_query("""
+                    UPDATE users SET activeItems = activeItems - %s
+                    WHERE id = %s
+                    RETURNING COALESCE(activeItems, '{}'::jsonb)
+                """, (
+                    str(item_id),
+                    self.id,
+                ), fetch = 'one')
+            
+            # Update cache
+            self._active_items = data[0]
+
+            logger.info(f"{self.id} - Deactivated item {MoneyItem.from_id(item_id).name} (id {item_id})")
+        except Exception:
+            logger.exception(f"Failed to deactivate item with id {item_id}")

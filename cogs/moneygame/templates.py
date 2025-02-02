@@ -13,7 +13,7 @@ class BankBalance(discord.Embed):
         )
 
         self.add_field(name="Wallet Balance", value=f"{COIN} `{user.wallet:,}`", inline=False)
-        self.add_field(name="Bank Balance", value=f"{COIN} `{user.bank:,}`")
+        self.add_field(name="Bank Balance", value=f"{COIN} `{user.bank:,}` / `{user.max_bank:,}`")
 
 
 class EmbedProfile(discord.Embed):
@@ -41,9 +41,20 @@ class EmbedProfile(discord.Embed):
 
         self.add_field(
             name = "Bonus",
-            value = f"* +{round((user.calculate_cash_multi() - 1) * 100)}% cash",
+            value = f"* +{round((user.coin_multi - 1) * 100)}% cash",
             inline = True
         )
+
+        if user.active_items:
+            self.add_field(
+                name = "Active Items",
+                value = '\n'.join([
+                    f"* {MoneyItem.from_id(int(str_item_id)).emoji} **{MoneyItem.from_id(int(str_item_id)).name}** "
+                    f"expires <t:{expire_time}:R> (<t:{expire_time}:t>)"
+                    for str_item_id, expire_time in user.active_items.items()
+                ]),
+                inline = False
+            )
 
         self.set_thumbnail(url=avatar_url)
 

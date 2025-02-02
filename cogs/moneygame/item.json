@@ -18,10 +18,10 @@
         "type": "Buff"
     },
     "3": {
-        "name": "Save State",
-        "emoji": "<:SaveState:1334056024771919922>",
+        "name": "Reviver Seed",
+        "emoji": "<:ReviverSeed:1335561131653333084>",
         "use": "If you die, you will not lose any coins and this item will be used up.",
-        "description": "Life is not a game",
+        "description": "I hope it's the correct seed.",
         "sell": 5000,
         "rarity": "Common",
         "type": "Tool"
@@ -29,7 +29,7 @@
     "4": {
         "name": "Apple",
         "emoji": "<:Apple:1334056545113341953>",
-        "use": "For the next 6 hours, your chance of dying is significantly reduced.",
+        "use": "For the next 3 hours, your chance of dying is significantly reduced.",
         "description": "Guildmaster Wigglytuff won't be happy if you ate those.",
         "sell": 200,
         "rarity": "Common",
