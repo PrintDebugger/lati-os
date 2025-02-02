@@ -28,9 +28,11 @@ class LuckHandler:
         cls._load_data()
         if not cls._rng_data:
             logger.error("RNG data is empty")
+            return None
         
         if not type in cls._rng_data:
             logger.error(f"No rng data for type {type}")
+            return None
         
         outcome = cls()
         outcome.success = False

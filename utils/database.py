@@ -37,11 +37,13 @@ def initialise_db():
                         id BIGSERIAL PRIMARY KEY,
                         wallet INTEGER DEFAULT 10000,
                         bank INTEGER DEFAULT 0,
+                        bankBonus INTEGER DEFAULT 0,
                         level INTEGER DEFAULT 1,
                         exp INTEGER DEFAULT 0,
                         items JSONB DEFAULT '{}'::jsonb,
                         activeItems JSONB DEFAULT '{}'::jsonb
                     );
+                    ALTER TABLE users ADD COLUMN IF NOT EXISTS bankBonus INTEGER DEFAULT 0;
                     ALTER TABLE users ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '{}'::jsonb;
                     ALTER TABLE users ADD COLUMN IF NOT EXISTS activeItems JSONB DEFAULT '{}'::jsonb;
                 """)

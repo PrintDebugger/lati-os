@@ -1,4 +1,6 @@
 import random
+import time
+
 import discord
 from discord.ext import commands
 
@@ -19,7 +21,28 @@ class MoneyGame(commands.Cog):
         user = MoneyUser(ctx.user.id)
 
         if not user.has_account:
-            user.create_account()
+            return user.create_account()
+        
+        if not user.active_items:
+            return
+        
+        #   Check for expired items
+        item_list = ""
+        current_time = time.time()
+        for str_item_id, expire_time in user.active_items.items():
+            if expire_time < current_time:
+                item = MoneyItem.from_id(int(str_item_id))
+                await user.deactivate_item(int(str_item_id))
+                item_list += f"\n* {item.emoji} {item.name}"
+
+        if not item_list:
+            return
+        
+        await ctx.user.send(embed=discord.Embed(
+            title = "Item Expired",
+            description = "Uh oh! Some of your items have expired." + item_list,
+            color = discord.Colour.brand_red()
+        ))
 
 
     async def cog_after_invoke(self, ctx): # Send level up message after a command (if the user levels up)
@@ -64,7 +87,7 @@ class MoneyGame(commands.Cog):
             user.create_account()
         
         user.load_all()
-        await ctx.respond(f"Viewing {target.name}'s profile", embed=EmbedProfile(target.display_name, target.avatar.url, user))
+        await ctx.respond(f"Viewing {target.name}'s profile", embed=EmbedProfile(target.name, target.avatar.url, user))
 
 
     @discord.slash_command()
@@ -75,33 +98,36 @@ class MoneyGame(commands.Cog):
             "Someone walks past and notices you...",
             "You waited and waited... oh, someone's coming.",
             "You heard something... probably just the wind?",
-            "You decided to breakdance and people thought you were a street performer... or a dumbass.",
+            "You decided to breakdance and everyone thought you were a performer... or a dumbass.",
             "You slept at the streets for the night."
         ]) + "\n"
 
         chance = random.random()
         outcome = LuckHandler.get_outcome('beg', chance)
         user = MoneyUser(ctx.user.id)
-        ctx.level_data = await user.add_exp(10)
 
         if not outcome.success:
             message += "* Lmao you got ignored. You got 0 coins"
-            return await ctx.respond(embed=discord.Embed(description=message, color=discord.Colour.brand_red()))
+            await ctx.respond(embed=discord.Embed(description=message, color=discord.Colour.brand_red()))
+        else:
+            base_earnings = random.randint(*outcome.info['coinRange'])
+            earnings = int(base_earnings * user.coin_multi)
+            message += f"* You got {earnings:,} coins!"
 
-        base_earnings = random.randint(*outcome.info['coinRange'])
-        earnings = int(base_earnings * user.calculate_cash_multi())
-        message += f"* You got {earnings:,} coins!"
-        await user.add_wallet(earnings)
+            get_item = None
+            if 'items' in outcome.info:
+                for item_id, x in outcome.info['items'].items():
+                    if random.random() < x:
+                        get_item = MoneyItem.from_id(int(item_id))
+                        message += f"\n* You also got 1 {get_item.emoji} **{get_item.name}**!"
+                        break
 
-        if 'items' in outcome.info:
-            for item_id, x in outcome.info['items'].items():
-                if random.random() < x:
-                    get_item = MoneyItem.from_id(int(item_id))
-                    await user.add_item(int(item_id), 1)
-                    message += f"\n* You also got 1 {get_item.emoji} **{get_item.name}**!"
-                    break
-
-        await ctx.respond(embed=discord.Embed(description=message, color=discord.Colour.brand_green()))
+            await ctx.respond(embed=discord.Embed(description=message, color=discord.Colour.brand_green()))
+            await user.add_wallet(earnings)
+            if get_item:
+                await user.add_item(get_item.id, 1)
+                
+        ctx.level_data = await user.add_exp(10)
 
 
     @discord.slash_command()
@@ -117,14 +143,14 @@ class MoneyGame(commands.Cog):
         
         stealer = MoneyUser(ctx.user.id)
         if stealer.wallet < ROB_MIN_AMOUNT:
-            return await ctx.respond(f"You need at least ${ROB_MIN_AMOUNT} to steal, or else you end up in jail")
+            return await ctx.respond(f"You need at least {ROB_MIN_AMOUNT} coins to steal, or else you end up in jail")
 
         victim = MoneyUser(target.id)
         if victim.level < ROB_MIN_LEVEL:
             return await ctx.respond(f"You cannot steal from someone who isn't Level {ROB_MIN_LEVEL} yet.")
         
         if victim.wallet < ROB_MIN_AMOUNT:
-            return await ctx.respond(f"bro doesn't even have ${ROB_MIN_AMOUNT} leave him alone ba")
+            return await ctx.respond(f"bro doesn't even have {ROB_MIN_AMOUNT} coins leave him alone ba")
         
         chance = random.random()
         outcome = LuckHandler.get_outcome('steal', chance)
@@ -137,14 +163,14 @@ class MoneyGame(commands.Cog):
             stolen = - max(200, round(stealer.wallet * 0.05))
             message = (
                 "Oof, you kena tangkap lol.\n"
-                f"You paid {target.display_name} {abs(stolen):,} coins for trying to rob them."
+                f"You paid {target.name} {abs(stolen):,} coins for trying to rob them."
             )
             color = discord.Colour.brand_red()
-        
+
+        await ctx.respond(embed=discord.Embed(description=message, color=color))
+        ctx.level_data = await stealer.add_exp(10)
         await stealer.add_wallet(stolen)
         await victim.add_wallet(- stolen)
-        ctx.level_data = await stealer.add_exp(10)
-        await ctx.respond(embed=discord.Embed(description=message, color=color))
 
 
     @discord.slash_command()
@@ -176,7 +202,7 @@ class MoneyGame(commands.Cog):
         if not view.result:
             return
         
-        await ctx.respond(f"{ctx.user.display_name} has gave {target.display_name} {amount:,} coins!")
+        await ctx.respond(f"{ctx.user.name} has gave {target.name} {amount:,} coins!")
         await donor.add_wallet(- amount)
         await receiver.add_wallet(amount)
         ctx.level_data = await donor.add_exp(10)
@@ -192,6 +218,12 @@ class MoneyGame(commands.Cog):
         user = MoneyUser(ctx.user.id)
         if amount > user.wallet:
             return await ctx.respond(f"Your wallet has only {user.wallet:,} coins")
+        
+        if user.bank >= user.max_bank:
+            return await ctx.respond(f"Your bank is full! Run commands to level up or use bank notes and try again.")
+        
+        if user.bank + amount > user.max_bank:
+            amount = user.max_bank - user.bank
 
         await user.add_bank(amount)
         await ctx.respond(embed=BankBalance("Deposited", amount, user))
@@ -274,14 +306,44 @@ class MoneyGame(commands.Cog):
                 description = f"You only have {user_has_amount} {item.emoji} **{item.name}**"
             ))
         
-        #   oh god
-        if item_id == 1:
-            embed = discord.Embed(
-                color=None,
+        effect_duration = 0 # Initialise effect duration for items that can be activated
+
+        #   YandereDev if else shit goes here
+        if item_id == 1: # Gold Firework
+            amount = 1
+            return await ctx.respond("You can't use this item yet. Please stand by!")
+            '''embed = discord.Embed(
+                color=0xff9988,
                 title="IT'S RAINING COINS",
                 description=f"{ctx.user.display_name} has fired a Gold Firework!\nClick the button to collect them!"
-            )
+            )'''
             # send message
+
+        elif item_id == 2: # Bank Note
+            increase = 0
+            for _ in range(amount):
+                increase += random.randint(5000, 25000)
+            embed = discord.Embed(description=f"{amount} {item.emoji} **Bank Note** used.")
+            embed.add_field(name="Amount Added", value=f"{COIN} `{increase:,}`", inline=False)
+            embed.add_field(name="Total Bank Space", value=f"{COIN} `{(user.max_bank + increase):,}`")
+            await user.increase_max_bank(increase)
+
+        elif item_id == 3: # Save State
+            return await ctx.respond("You're still alive! Save this item for later, 'kay?")
+
+        elif item_id == 4: # apple
+            amount = 1
+            effect_duration = 3 * 3600
+            embed = discord.Embed(description=f"You used an {item.emoji} **Apple**!\n* You are less likely to die for the next 3 hours.")
+
+        else:
+            return await ctx.respond("You can't use this item yet. Please stand by!")
+        
+        await ctx.respond(embed=embed)
+        if amount:
+            await user.add_item(item_id, -amount)
+        if effect_duration:
+            await user.activate_item(item_id, effect_duration)
 
 
 def setup(bot): # Pycord calls this function to setup this cog
