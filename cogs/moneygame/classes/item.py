@@ -1,7 +1,7 @@
 import json
 import discord
 
-from cogs.moneygame.constants import PATH_ITEMDATA
+from ..config import PATH_ITEMDATA
 from utils import logger
 
 
@@ -23,14 +23,16 @@ class MoneyItem:
 
     #   Create Item class based on item_id
     @classmethod
-    def from_id(cls, item_id: int):
+    def from_id(cls, item_id):
+        item_id = str(item_id)
+
         cls._load_data()
 
         if not cls._item_metadata:
             return None
         
         try:
-            data = cls._item_metadata[str(item_id)]
+            data = cls._item_metadata[item_id]
         except KeyError:
             logger.error(f"KeyError: item_id {item_id} does not exist")
             return None
@@ -57,9 +59,9 @@ class MoneyItem:
         if not cls._item_metadata:
             return None
         
-        for str_item_id, data in cls._item_metadata.items():
+        for item_id, data in cls._item_metadata.items():
             if data['name'] == name:
-                return cls.from_id(int(str_item_id))
+                return cls.from_id(item_id)
             
         logger.error(f"No item found with name {name}")
         return None

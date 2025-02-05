@@ -1,8 +1,8 @@
 #   Embed template for Profile menu
 
 import discord
-from cogs.moneygame import MoneyItem
-from cogs.moneygame.constants import COIN
+from .classes import MoneyItem
+from .config import COIN
 from utils import progress_bar
 
 
@@ -49,9 +49,9 @@ class EmbedProfile(discord.Embed):
             self.add_field(
                 name = "Active Items",
                 value = '\n'.join([
-                    f"* {MoneyItem.from_id(int(str_item_id)).emoji} **{MoneyItem.from_id(int(str_item_id)).name}** "
+                    f"* {MoneyItem.from_id(item_id).emoji} **{MoneyItem.from_id(item_id).name}** "
                     f"expires <t:{expire_time}:R> (<t:{expire_time}:t>)"
-                    for str_item_id, expire_time in user.active_items.items()
+                    for item_id, expire_time in user.active_items.items()
                 ]),
                 inline = False
             )
@@ -96,6 +96,7 @@ class ItemInfo(discord.Embed):
         self.add_field(name="Sell for", value=f"{COIN} `{item.sell_price:,}`")
         self.set_footer(text=f"{item.rarity} {item.type}")
         self.set_thumbnail(url=discord.PartialEmoji.from_str(item.emoji).url)
+
 
 class SingleItemMessage(discord.Embed):
     def __init__(self, message:str, item:MoneyItem):

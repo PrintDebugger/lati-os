@@ -1,8 +1,8 @@
 import json
 import discord
 
-from cogs.moneygame import MoneyItem
-from cogs.moneygame.constants import PATH_SHOPDATA, COIN
+from ...classes import MoneyItem
+from ...config import PATH_SHOPDATA, COIN
 from interactions import ConfirmAction, ConfirmEmbed
 from utils import logger
 
@@ -58,14 +58,16 @@ class BuyButton(discord.ui.Button):
             disabled = self.user.wallet < price
         )
 
+
     async def callback(self, interaction):
+
         #   Check whether the wallet is still the correct amount
         old_wallet = self.user.wallet
         self.user._wallet = None # Reset the cache
         if self.user.wallet == old_wallet:
             pass
         else:
-            await self.view.message.edit(embed=ShopEmbed(self.user), view=Shop(self.sender, self.user))
+            await self.view.message.edit(embed=ShopEmbed(self.user), view=ShopView(self.sender, self.user))
             if self.user.wallet < self.price:
                 return await interaction.response.send_message("You don't have enough coins, nice try.", ephemeral=True)
 
@@ -85,10 +87,10 @@ class BuyButton(discord.ui.Button):
             await self.user.add_wallet(- self.price)
             await self.user.add_item(self.item_id, 1)
 
-        await self.view.message.edit(embed=ShopEmbed(self.user), view=Shop(self.sender, self.user))
+        await self.view.message.edit(embed=ShopEmbed(self.user), view=ShopView(self.sender, self.user))
 
 
-class Shop(discord.ui.View):
+class ShopView(discord.ui.View):
 
     def __init__(self, sender, user):
         super().__init__(timeout=30)
@@ -114,4 +116,4 @@ class Shop(discord.ui.View):
     @discord.ui.button(label="Refresh Listing", row=1)
     async def refresh(self, button:discord.ui.Button, interaction:discord.Interaction):
         self.user._wallet = None
-        await interaction.response.edit_message(embed=ShopEmbed(self.user), view=Shop(self.sender, self.user))
+        await interaction.response.edit_message(embed=ShopEmbed(self.user), view=ShopView(self.sender, self.user))
