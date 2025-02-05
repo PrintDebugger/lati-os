@@ -31,17 +31,17 @@
             {
                 "chance": 0.005,
                 "amountRange": [1, 1],
-                "message": "\ud83e\udd11  WTF YOU STOLE **EVERYTHING** ({0:,} coins!), Gai Loooooo"
+                "message": "WTF, YOU STOLE **EVERYTHING**! \ud83e\udd11"
             },
             {
                 "chance": 0.04,
                 "amountRange": [0.5, 0.7],
-                "message": "\ud83d\udcb0  You stole a lot of money leh, you got {0:,} coins, happy ma?"
+                "message": "You stole a lot of money, are you happy now? \ud83d\udcb0"
             },
             {
                 "chance": 0.355,
                 "amountRange": [0, 0.3],
-                "message": "\ud83d\udcb8  You stole some money and quietly left... you got {0:,} coins."
+                "message": "You stole some money and quietly left... \ud83d\udcb8"
             }
         ]
     }

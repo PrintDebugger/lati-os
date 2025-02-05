@@ -1,7 +1,8 @@
 #   Fetch userdata through a discord user ID
 import time
 
-from cogs.moneygame import MoneyItem
+from . import MoneyItem
+from .. import MoneyGame
 from utils import execute_query, logger
 
 class MoneyUser:
@@ -110,6 +111,8 @@ class MoneyUser:
             logger.info(f"{self.id} - updated wallet: {old_wallet} -> {self._wallet}")
         except Exception:
             logger.exception(f"{self.id} - Failed to update wallet")
+        
+        return self
 
 
     async def add_bank(self, amount):
@@ -126,6 +129,8 @@ class MoneyUser:
         except Exception:
             logger.exception(f"{self.id} - Failed to update bank")
 
+        return self
+
     
     async def increase_max_bank(self, amount):
         try:
@@ -138,6 +143,8 @@ class MoneyUser:
             logger.info(f"{self.id} - increased bank cap by {amount}")
         except Exception:
             logger.exception(f"{self.id} - Failed to increase bank cap")
+
+        return self
             
 
     async def add_exp(self, amount):
@@ -175,7 +182,9 @@ class MoneyUser:
         }
 
     
-    async def add_item(self, item_id: int, amount: int):
+    async def add_item(self, item_id, amount: int):
+        item_id = str(item_id)
+
         if amount == 0:
             raise ValueError("Amount cannot be zero")
         
@@ -202,11 +211,11 @@ class MoneyUser:
                 RETURNING COALESCE(items, '{}'::jsonb)
             """, (
                 self.id,
-                str(item_id), amount,
-                str(item_id), amount,
-                str(item_id),
-                str(item_id),
-                str(item_id), amount,
+                item_id, amount,
+                item_id, amount,
+                item_id,
+                item_id,
+                item_id, amount,
                 self.id,
             ), fetch='one')
 
@@ -214,15 +223,19 @@ class MoneyUser:
             self._items = data[0]
             
             #   Logging
-            new_item_amount = self._items.get(str(item_id), 0)
+            new_item_amount = self._items.get(item_id, 0)
             logger.info(f"{self.id} - updated item {MoneyItem.from_id(item_id).name} (id {item_id}): {new_item_amount - amount} -> {new_item_amount}")
 
         except Exception:
             logger.exception(f"{self.id} - Failed to update item with id {item_id}")
             raise
 
+        return self
+
     
-    async def activate_item(self, item_id: int, duration: int):
+    async def activate_item(self, item_id, duration: int):
+        item_id = str(item_id)
+
         if duration <= 0:
             raise ValueError("duration must be a positive integer")
         
@@ -236,22 +249,26 @@ class MoneyUser:
                 WHERE id = %s
                 RETURNING COALESCE(activeItems, '{}'::jsonb)
                 """, (
-                    str(item_id),
-                    str(item_id), int(time.time()), duration,
+                    item_id,
+                    item_id, int(time.time()), duration,
                     self.id,
                 ), fetch = 'one')
             
             # Update cache
             self._active_items = data[0]
 
-            end_time = self._active_items[str(item_id)]
+            end_time = self._active_items[item_id]
             logger.info(f"{self.id} - Activated item {MoneyItem.from_id(item_id).name} (id {item_id}) ending at {end_time}")
         except Exception:
             logger.exception(f"Failed to activate item with id {item_id}")
 
+        return self
+
 
     async def deactivate_item(self, item_id):
-        if not str(item_id) in self._active_items:
+        item_id = str(item_id)
+
+        if not item_id in self._active_items:
             raise ValueError(f"{item_id} was never activated")
         
         try:
@@ -260,7 +277,7 @@ class MoneyUser:
                     WHERE id = %s
                     RETURNING COALESCE(activeItems, '{}'::jsonb)
                 """, (
-                    str(item_id),
+                    item_id,
                     self.id,
                 ), fetch = 'one')
             
@@ -270,3 +287,13 @@ class MoneyUser:
             logger.info(f"{self.id} - Deactivated item {MoneyItem.from_id(item_id).name} (id {item_id})")
         except Exception:
             logger.exception(f"Failed to deactivate item with id {item_id}")
+
+        return self
+    
+    async def death(self, message):
+        if "3" in self.items: # user revived
+            await MoneyGame.send_death_message(self.id, message, left=self.items["3"]-1)
+            return self.add_item(3, -1)
+        
+        await MoneyGame.send_death_message(self.id, message, wallet=self.wallet)
+        return self.add_wallet(-self.wallet)
