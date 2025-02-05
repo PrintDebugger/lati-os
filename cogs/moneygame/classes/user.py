@@ -2,7 +2,6 @@
 import time
 
 from . import MoneyItem
-from .. import MoneyGame
 from utils import execute_query, logger
 
 class MoneyUser:
@@ -289,11 +288,3 @@ class MoneyUser:
             logger.exception(f"Failed to deactivate item with id {item_id}")
 
         return self
-    
-    async def death(self, message):
-        if "3" in self.items: # user revived
-            await MoneyGame.send_death_message(self.id, message, left=self.items["3"]-1)
-            return self.add_item(3, -1)
-        
-        await MoneyGame.send_death_message(self.id, message, wallet=self.wallet)
-        return self.add_wallet(-self.wallet)

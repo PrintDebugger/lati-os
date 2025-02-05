@@ -6,6 +6,7 @@ from discord.ext import commands
 from .classes import MoneyUser, MoneyItem, LuckHandler
 from .config import *
 from .functions import (
+    BegCommand,
     StealCommand,
     ShopEmbed, ShopView
 )
@@ -83,10 +84,21 @@ class MoneyGame(commands.Cog):
         return discord.ext.commands.check(predicate)
 
 
-    async def send_death_message(self, user_id, message, wallet=None, left=None) -> discord.Message:
-        user = self.bot.fetch_user(user_id) 
+    async def kill(self, user, message) -> discord.Message:
+        if "3" in user.items: # user revived
+            await user.add_item(3, -1)
+            left = user.items.get("3", 0)
+            wallet = None
+        else:
+            left = None
+            wallet = user.wallet
+            await user.add_wallet(-user.wallet)
+
+        receiver = await self.bot.fetch_user(user.id) 
         item = MoneyItem.from_id(3)
-        return await user.send(embed = discord.Embed(
+
+        #   Send death message
+        return await receiver.send(embed = discord.Embed(
             color = 0xff61bb,
             title = (
                 "Reviver Seed used!"
@@ -94,7 +106,7 @@ class MoneyGame(commands.Cog):
                 else "You died!"
             ),
             description = f"You died while {message}!" + (
-                f" BUT your {item.emoji} **{item.name}** activated and preventing you from actually dying!\n"
+                f" BUT your {item.emoji} **{item.name}** activated and prevented you from actually dying!\n"
                 f"* You have {left} {item.emoji} **{item.name}** left."
                 if left
                 else f"\n* You lost **{wallet} coins**."
@@ -118,16 +130,14 @@ class MoneyGame(commands.Cog):
 
 
     @discord.slash_command()
-    @commands.cooldown(1, 5, commands.BucketType.user)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     async def beg(self, ctx):
         """Beg for a small amount money."""
-        message = "> " + random.choice([
-            "Someone walks past and notices you...",
-            "You waited and waited... oh, someone's coming.",
-            "You heard something... probably just the wind?",
-            "You decided to breakdance and everyone thought you were a performer... or a dumbass.",
-            "You slept at the streets for the night."
-        ]) + "\n"
+        try:
+            message = f"> {BegCommand.get_random_message()}\n"
+        except Exception:
+            message = "> You tried begging at the streets\n"
+            logger.exception("Unable to generate beg message")
 
         chance = random.random()
         outcome = LuckHandler.get_outcome('beg', chance)
@@ -135,7 +145,7 @@ class MoneyGame(commands.Cog):
 
         if not outcome.success:
             message += "* Lmao you got ignored. You got 0 coins"
-            await ctx.respond(embed=discord.Embed(description=message, color=discord.Colour.brand_red()))
+            await ctx.respond(embed=discord.Embed(description=message, color=0xff61bb))
         else:
             base_earnings = random.randint(*outcome.info['coinRange'])
             earnings = int(base_earnings * user.coin_multi)
@@ -158,7 +168,7 @@ class MoneyGame(commands.Cog):
 
 
     @discord.slash_command()
-    @commands.cooldown(1, 90, commands.BucketType.user)
+    @commands.cooldown(1, 60, commands.BucketType.user)
     @level_limit(ROB_MIN_LEVEL)
     async def steal(self, ctx, target: discord.Member):
         """Steal someone's money."""
@@ -193,7 +203,7 @@ class MoneyGame(commands.Cog):
         response = await ctx.respond(embed=discord.Embed(description=msg, color=color))
         steal_msg = await response.original_response()
 
-        padlock_break = (result == "FAIL_PADLOCK" & random.random() < 0.1) # 10% chance to break padlock
+        padlock_break = (result == "FAIL_PADLOCK") and (random.random() < 0.15) # 15% chance to break padlock
 
         if result != "OTHER":
             ctx.level_data = await stealer.add_exp(10)
@@ -202,8 +212,8 @@ class MoneyGame(commands.Cog):
             if padlock_break:
                 await victim.deactivate_item(5)
         else:
-            await stealer.death("trying to steal some money")
             await victim.deactivate_item(6)
+            await self.kill(stealer, "trying to steal some money")
         
         #   Send DM to the victim
         try:

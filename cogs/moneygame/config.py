@@ -2,6 +2,7 @@
 PATH_ITEMDATA = "cogs/moneygame/data/item.json"
 PATH_SHOPDATA = "cogs/moneygame/data/shop.json"
 PATH_RNGDATA = "cogs/moneygame/data/rng.json"
+PATH_BEGMSG = "cogs/moneygame/functions/beg/story.txt"
 
 
 #   Default currency symbol
