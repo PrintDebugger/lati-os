@@ -136,7 +136,7 @@ class MoneyGame(commands.Cog):
         try:
             message = f"> {BegCommand.get_random_message()}\n"
         except Exception:
-            message = "> You tried begging at the streets\n"
+            message = "> You tried begging on the streets\n"
             logger.exception("Unable to generate beg message")
 
         chance = random.random()
@@ -159,7 +159,7 @@ class MoneyGame(commands.Cog):
                         message += f"\n* You also got 1 {get_item.emoji} **{get_item.name}**!"
                         break
 
-            await ctx.respond(embed=discord.Embed(description=message, color=discord.Colour.brand_green()))
+            await ctx.respond(embed=discord.Embed(description=message, color=0x70d772))
             await user.add_wallet(earnings)
             if get_item:
                 await user.add_item(get_item.id, 1)
