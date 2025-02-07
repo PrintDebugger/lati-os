@@ -39,15 +39,18 @@ class Misc(commands.Cog):
     @discord.option(
         "pokemon", str, 
         description="The pokemon to search for.",
-        autocomplete=discord.utils.basic_autocomplete(['latias', 'latios', 'meowscarada'])
+        autocomplete=ImageCommand.get_all_tags
     )
     async def pokeart(self, ctx,  pokemon):
         '''Returns some pokemon art!'''
         try:
-            data = ImageCommand.get_random_image(pokemon)
-            embed = discord.Embed(color=0x759cf7, description=f"` Artist ` {data['artist']}")
-            embed.set_image(url=data['url'])
-            embed.set_footer(text=f"Tags: {', '.join(data['tags'])}")
+            img = ImageCommand.get_random_image(pokemon)
+            if img:
+                embed = discord.Embed(color=0x759cf7, description=f"` Artist ` {img['artist']}")
+                embed.set_image(url=img['url'])
+                embed.set_footer(text=f"Tags: {', '.join(img['tags'])}")
+            else:
+                embed = discord.Embed(color=0xff61bb, description="No results found :(")
         except Exception:
             embed = discord.Embed(color = 0xff61bb, description="Shoot, something went wrong.")
             logger.exception("Unable to load image")
