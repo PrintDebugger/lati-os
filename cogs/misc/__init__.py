@@ -36,7 +36,11 @@ class Misc(commands.Cog):
 
 
     @discord.slash_command()
-    @discord.option("pokemon", str, autocomplete=discord.utils.basic_autocomplete(['latias', 'latios', 'meowscarada']))
+    @discord.option(
+        "pokemon", str, 
+        description="The pokemon to search for.",
+        autocomplete=discord.utils.basic_autocomplete(['latias', 'latios', 'meowscarada'])
+    )
     async def pokeart(self, ctx,  pokemon):
         '''Returns some pokemon art!'''
         try:

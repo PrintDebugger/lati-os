@@ -26,8 +26,7 @@ class ImageCommand:
         else:
             target_types = {tag.lower()}
 
-        # Filter using lambda to check intersection
-        filtered_images = list(filter(lambda img: set(img['tags']) & target_types, images))
+        filtered_images = [i for i in images if any(t in target_types for t in i['tags'])]
 
         if not filtered_images:
             logger.warning(f"No images found for tag: {tag}")
