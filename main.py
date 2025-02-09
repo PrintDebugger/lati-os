@@ -14,11 +14,13 @@ class LatiBot(discord.Bot):
 
     def __init__(self, debug_guilds=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.admins = [717408952035573767]
         self.debug_guilds = debug_guilds or []
 
     async def on_ready(self):
-        await self.sync_commands()
         logger.info(f"{self.user} has connected to Discord")
+        await self.sync_commands()
+        logger.info(f"Commands synced")
 
     async def on_application_command_error(self, ctx: discord.ApplicationContext, error):
         if isinstance(error, commands.errors.CommandOnCooldown):

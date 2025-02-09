@@ -46,16 +46,17 @@ class Misc(commands.Cog):
         try:
             img = ImageCommand.get_random_image(pokemon)
             if img:
-                embed = discord.Embed(color=0x759cf7, description=f"` Artist ` {img['artist']}")
+                embed = discord.Embed(color=0x759cf7, description=f"Artist: {img['artist']}")
                 embed.set_image(url=img['url'])
                 embed.set_footer(text=f"Tags: {', '.join(img['tags'])}")
             else:
-                embed = discord.Embed(color=0xff61bb, description="No results found :(")
+                embed = discord.Embed(color=0xff61bb, description="Nobody here but us chickens!")
         except Exception:
             embed = discord.Embed(color = 0xff61bb, description="Shoot, something went wrong.")
             logger.exception("Unable to load image")
 
         await ctx.respond(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Misc(bot))

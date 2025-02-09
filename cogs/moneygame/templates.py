@@ -27,21 +27,19 @@ class EmbedProfile(discord.Embed):
                 f"-# EXP: {user.exp} / {25 * (user.level+1)}"
             )
         )
-        self.description = self.description.replace('@', '\u25B0')
-        self.description = self.description.replace('^', '\u25B1')
 
         self.add_field(
             name = "Money",
             value = (
-                f"{COIN} `{user.wallet:,}`\n"
-                f"🏦 `{user.bank:,}`\n"
-                f"Total: `{(user.wallet + user.bank):,}`"
+                f"> {COIN} `{user.wallet:,}`\n"
+                f"> 🏦 `{user.bank:,}`\n"
+                f"> Total: `{(user.wallet + user.bank):,}`"
             )
         )
 
         self.add_field(
             name = "Bonus",
-            value = f"* +{round((user.coin_multi - 1) * 100)}% cash",
+            value = f"> `+{round((user.coin_multi - 1) * 100)}%` COIN",
             inline = True
         )
 
@@ -93,14 +91,9 @@ class ItemInfo(discord.Embed):
             title = f"{item.name} ({amount})",
             description = f"> *{item.description}*\n\n{item.use}"
         )
-        self.add_field(name="Sell for", value=f"{COIN} `{item.sell_price:,}`")
+
+        if item.sell_price:
+            self.add_field(name="Sell for", value=f"{COIN} `{item.sell_price:,}`")
+
         self.set_footer(text=f"{item.rarity} {item.type}")
         self.set_thumbnail(url=discord.PartialEmoji.from_str(item.emoji).url)
-
-
-class SingleItemMessage(discord.Embed):
-    def __init__(self, message:str, item:MoneyItem):
-        article = "an" if item.name[0] in "AEIOUaeiou" else "a"
-        super().__init__(
-            description = f"You used {article} {item.emoji} **{item.name}**!\n* {message}"
-        )

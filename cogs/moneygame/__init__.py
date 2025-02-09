@@ -8,14 +8,14 @@ from .config import *
 from .functions import (
     BegCommand,
     StealCommand,
-    ShopEmbed, ShopView
+    ShopEmbed, ShopView,
+    OneTimeButton
 )
 from .templates import (
     EmbedProfile, 
     Inventory, 
     ItemInfo, 
     BankBalance, 
-    SingleItemMessage
 )
 from interactions import ConfirmAction, ConfirmEmbed
 from utils import initialise_db, logger
@@ -113,6 +113,7 @@ class MoneyGame(commands.Cog):
             )
         ))
 
+
     #   COMMANDS
 
     @discord.slash_command()
@@ -165,6 +166,12 @@ class MoneyGame(commands.Cog):
                 await user.add_item(get_item.id, 1)
                 
         ctx.level_data = await user.add_exp(10)
+
+
+    @discord.slash_command()
+    @commands.cooldown(1, 20, commands.BucketType.user)
+    async def dig(self, ctx):
+        await ctx.respond("Coming soon!", ephemeral=True)
 
 
     @discord.slash_command()
@@ -222,6 +229,7 @@ class MoneyGame(commands.Cog):
         except Exception: 
             logger.exception("Failed to send DM")
 
+
     @discord.slash_command()
     @discord.option('amount', int, min_value=1)
     async def give(self, ctx, amount: int, target: discord.Member):
@@ -229,14 +237,13 @@ class MoneyGame(commands.Cog):
         if target.id == ctx.user.id:
             return await ctx.respond("You cannot give money to yourself la bodoh")
 
-        receiver = MoneyUser(target.id)
-        if not receiver.has_account:
-            receiver.create_account()
-        
         donor = MoneyUser(ctx.user.id)
+        receiver = MoneyUser(target.id)
+
+        if not receiver.has_account:
+            receiver.create_account()   
         if donor.wallet == 0:
             return await ctx.respond("You don't have any money to share.")
-    
         if amount > donor.wallet:
             return await ctx.respond(f"You cannot share more than what you have ({donor.wallet:,} coins)")
 
@@ -265,12 +272,11 @@ class MoneyGame(commands.Cog):
     async def deposit(self, ctx, amount):
         """Deposit some money into the bank."""
         user = MoneyUser(ctx.user.id)
+
         if amount > user.wallet:
             return await ctx.respond(f"Your wallet has only {user.wallet:,} coins")
-        
         if user.bank >= user.max_bank:
             return await ctx.respond(f"Your bank is full! Run commands to level up or use bank notes and try again.")
-        
         if user.bank + amount > user.max_bank:
             amount = user.max_bank - user.bank
 
@@ -285,6 +291,7 @@ class MoneyGame(commands.Cog):
     async def withdraw(self, ctx, amount):
         """Withdraw some money from the bank."""
         user = MoneyUser(ctx.user.id)
+
         if amount > user.bank:
             return await ctx.respond(f"Your bank has only {user.bank:,} coins")
 
@@ -354,24 +361,56 @@ class MoneyGame(commands.Cog):
         user = MoneyUser(ctx.user.id)
         user_has_amount = user.items.get(item_id, 0)
         if user_has_amount < amount:
-            return await ctx.respond(embed=discord.Embed(
-                description = f"You only have {user_has_amount} {item.emoji} **{item.name}**"
-            ))
+            return await ctx.respond(embed=discord.Embed(description = f"You only have {user_has_amount} {item.emoji} **{item.name}**"))
         
-        effect_duration = 0 # Initialise effect duration for items that can be activated
+        #   Here comes the if else loop
+        if item.effect != 0: #  items with temporary effects
+            article = 'an' if item.name[0] in 'AEIOUaeiou' else 'a'
+            embed = discord.Embed(description = f"You used {article} {item.emoji} **{item.name}**!\n* {item.use}")
 
-        #   YandereDev if else shit goes here
-        if item_id == '1': # gold firework
-            amount = 1
-            return await ctx.respond("You can't use this item yet. Please stand by!")
-            '''
+            if item_id in user.active_items:
+                embed.description = f"You are already using {article} {item.emoji} **{item.name}**"
+                return await ctx.respond(embed=embed)
+            
+            amount = 1  # items that give temp effects can only be used one at a time
+            await ctx.respond(embed=embed)
+            
+        elif item_id == '1': # gold firework
             embed = discord.Embed(
                 color=0xff9988,
                 title="IT'S RAINING COINS",
                 description=f"{ctx.user.display_name} has fired a Gold Firework!\nClick the button to collect them!"
             )
-            '''
-            # send message
+            embed.set_thumbnail(url=discord.PartialEmoji.from_str(item.emoji).url)
+
+            #   Create view and button
+            view = discord.ui.View(timeout=20)
+            view.joiners = [] # list of user ids that joined
+            button = OneTimeButton("JOIN", max_joins=10)
+            view.add_item(button)
+
+            response = await ctx.respond(embed=embed, view=view)
+            msg = await response.original_response()
+
+            await view.wait()
+            button.disabled = True
+            await msg.edit(view=view)
+
+            embed.title = f"{ctx.user.name}'s Gold Firework"
+            embed.remove_thumbnail()
+
+            if view.joiners == []:
+                embed.color, embed.description = 0xff61bb, "So sad, no one joined, not even yourself."
+                return await msg.reply(embed=embed)
+
+            embed.description = ""
+            embed.color = 0xf0e03a
+            for joiner in view.joiners:
+                coins = random.randint(400,3000)
+                await MoneyUser(joiner.id).add_wallet(coins)
+                embed.description += f"* {joiner.name} got {COIN} `{coins:,}`!\n"
+
+            await msg.reply(embed=embed)
 
         elif item_id == '2': # banknote
             increase = 0
@@ -380,25 +419,8 @@ class MoneyGame(commands.Cog):
             embed = discord.Embed(description=f"{amount} {item.emoji} **Bank Note** used.")
             embed.add_field(name="Amount Added", value=f"{COIN} `{increase:,}`", inline=False)
             embed.add_field(name="Total Bank Space", value=f"{COIN} `{(user.max_bank + increase):,}`")
+            await ctx.respond(embed=embed)
             await user.increase_max_bank(increase)
-
-        elif item_id == '3': # reviver
-            return await ctx.respond("You're still alive! Save this item for later, 'kay?")
-
-        elif item_id == '4': # apple
-            amount = 1
-            effect_duration = 10800
-            embed = SingleItemMessage("You are less likely to die for the next 3 hours.", item)
-
-        elif item_id == '5': # padlock
-            amount = 1
-            effect_duration = 7 * 86400
-            embed = SingleItemMessage("Your wallet is protected for 1 week.\n* Be careful though, your padlock may break if someone tries to steal from you.", item)
-
-        elif item_id == '6': # bomb trap
-            amount = 1
-            effect_duration = 86400
-            embed = SingleItemMessage("Anyone who tries to steal from you for the next 24 hours has a 50% chance to step on it and die.", item)
 
         elif item_id == '7': # feather
             return await ctx.respond("There's nothing useful about this feather. Consider selling it?")
@@ -406,11 +428,11 @@ class MoneyGame(commands.Cog):
         else:
             return await ctx.respond("You can't use this item yet. Please stand by!")
         
-        await ctx.respond(embed=embed)
-        if amount:
+        #   Use up item and apply effect duration if any
+        if item.effect != 0:
+            await user.activate_item(item_id, item.effect)
+        if amount != 0:
             await user.add_item(item_id, -amount)
-        if effect_duration:
-            await user.activate_item(item_id, effect_duration)
 
 
 def setup(bot): # Pycord calls this function to setup this cog

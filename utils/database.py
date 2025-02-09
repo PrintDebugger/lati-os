@@ -43,9 +43,6 @@ def initialise_db():
                         items JSONB DEFAULT '{}'::jsonb,
                         activeItems JSONB DEFAULT '{}'::jsonb
                     );
-                    ALTER TABLE users ADD COLUMN IF NOT EXISTS bankBonus INTEGER DEFAULT 0;
-                    ALTER TABLE users ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '{}'::jsonb;
-                    ALTER TABLE users ADD COLUMN IF NOT EXISTS activeItems JSONB DEFAULT '{}'::jsonb;
                 """)
                 conn.commit()
         logger.info(f"Connected to PostgreSQL database '{PGDATABASE}' at {PGHOST}:{PGPORT}")   

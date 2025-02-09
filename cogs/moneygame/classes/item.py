@@ -47,10 +47,12 @@ class MoneyItem:
             item.sell_price = data['sell']
             item.rarity = data['rarity']
             item.type = data['type']
+            item.effect = data.get('effect', 0)
             return item
         except KeyError:
             logger.exception(f"KeyError in item_id {item_id}")
             return None
+
 
     @classmethod
     def from_name(cls, name: str):
@@ -66,6 +68,7 @@ class MoneyItem:
         logger.error(f"No item found with name {name}")
         return None
     
+
     @classmethod
     def get_matching_items(cls, ctx:discord.AutocompleteContext):
         '''Returns a list of matching item names based on user input.'''
